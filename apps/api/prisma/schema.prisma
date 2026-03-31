@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model House {
+  id         Int               @id @default(autoincrement())
+  code       String            @unique
+  ownerName  String
+  address    String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  incidents  ParkingIncident[]
+}
+
+model ParkingIncident {
+  id                Int           @id @default(autoincrement())
+  houseId           Int
+  incidentDate      DateTime
+  note              String?
+  offenseCount      Int
+  noticeLevel       Int
+  fineAmount        Int           @default(0)
+  outstandingAmount Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  house             House         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  payment           FinePayment?
+
+  @@index([houseId, incidentDate])
+}
+
+model FinePayment {
+  id          Int             @id @default(autoincrement())
+  incidentId  Int             @unique
+  amount      Int
+  paidAt      DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  incident    ParkingIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+}
