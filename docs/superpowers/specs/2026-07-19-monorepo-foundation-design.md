@@ -1,35 +1,35 @@
-# SPK R5 Parking Log Monorepo Foundation Design
+# เอกสารออกแบบโครงสร้างเริ่มต้น Monorepo สำหรับ SPK R5 Parking Log
 
-## Goal
+## เป้าหมาย
 
-Create a pnpm workspace containing independently runnable and buildable Next.js frontend, NestJS backend, and shared TypeScript types package. This step excludes database, Prisma, authentication, Docker, and parking-violation business logic.
+สร้าง pnpm workspace ที่ประกอบด้วย Next.js Frontend, NestJS Backend และ Package สำหรับ TypeScript Types ที่ใช้ร่วมกัน โดยแต่ละส่วนต้องรันและ Build แยกกันได้ งานขั้นนี้ไม่รวม Database, Prisma, Authentication, Docker และ Business Logic สำหรับการกระทำผิดเรื่องที่จอดรถ
 
-## Architecture
+## สถาปัตยกรรม
 
-- Root workspace owns cross-project commands and includes `apps/*` and `packages/*`.
-- `apps/frontend` is a Next.js App Router application using TypeScript, Tailwind CSS, ESLint, `src`, and static export.
-- `apps/backend` is a NestJS application using strict TypeScript, global `/api` prefix, CORS, request validation, and environment-based port selection.
-- `packages/shared-types` compiles reusable types and declaration files for frontend and backend consumers.
-- `docs/business-rules.md` records domain rules without implementing them.
+- Root Workspace ดูแลคำสั่งส่วนกลาง และครอบคลุม `apps/*` กับ `packages/*`
+- `apps/frontend` เป็น Next.js App Router Application ใช้ TypeScript, Tailwind CSS, ESLint, `src` directory และ Static Export
+- `apps/backend` เป็น NestJS Application ใช้ TypeScript Strict Mode, Global Prefix `/api`, CORS, Request Validation และ Port จาก Environment Variable
+- `packages/shared-types` Compile Types ที่ Frontend และ Backend ใช้ร่วมกัน พร้อมสร้าง Type Declaration
+- `docs/business-rules.md` บันทึกกฎทางธุรกิจ โดยยังไม่สร้าง Business Logic
 
-## Components
+## ส่วนประกอบ
 
 ### Frontend
 
-Single responsive system-check page containing required product name, purpose, and running status. Visual direction uses asphalt navy, safety amber, road-marking white, and restrained parking-bay linework. System font stack avoids runtime font fetching. No server actions, API routes, SSR, dynamic rendering, or optimized Next.js images.
+มีหน้า System Check แบบ Responsive หน้าเดียว แสดงชื่อผลิตภัณฑ์ วัตถุประสงค์ และสถานะว่าระบบทำงานอยู่ ทิศทางภาพใช้สีน้ำเงินเข้มแบบพื้นถนน สีเหลืองนิรภัย สีขาวแบบเส้นจราจร และลายเส้นช่องจอดรถอย่างพอดี ใช้ System Font Stack เพื่อไม่ต้องโหลด Font ขณะ Runtime ไม่ใช้ Server Actions, API Routes, SSR, Dynamic Rendering หรือ Next.js Image Optimization
 
-Frontend reads `NEXT_PUBLIC_API_URL`; this foundation does not require runtime API fetching. Static export writes to `out`.
+Frontend อ่านค่า `NEXT_PUBLIC_API_URL` แต่ในโครงสร้างเริ่มต้นนี้ยังไม่จำเป็นต้องเรียก API ขณะ Runtime ผลลัพธ์ Static Export อยู่ใน `out`
 
 ### Backend
 
-Bootstrap configures:
+Bootstrap ตั้งค่าดังนี้:
 
-- Global prefix `api`
-- `ValidationPipe` with whitelist, transform, and forbidden unknown properties
-- CORS origin from `FRONTEND_URL`, falling back to `http://localhost:3000`
-- Port from `BACKEND_PORT`, falling back to `3001`
+- Global Prefix เป็น `api`
+- ใช้ `ValidationPipe` พร้อม Whitelist, Transform และปฏิเสธ Property ที่ไม่รู้จัก
+- CORS อ่าน Origin จาก `FRONTEND_URL` และใช้ `http://localhost:3000` เป็นค่าเริ่มต้น
+- Port อ่านจาก `BACKEND_PORT` และใช้ `3001` เป็นค่าเริ่มต้น
 
-Dedicated health module exposes `GET /api/health` and returns:
+Health Module แยกความรับผิดชอบชัดเจน เปิด Endpoint `GET /api/health` และตอบกลับ:
 
 ```json
 {
@@ -38,32 +38,32 @@ Dedicated health module exposes `GET /api/health` and returns:
 }
 ```
 
-Controller return type uses `HealthCheckResponse` from shared types.
+Return Type ของ Controller ใช้ `HealthCheckResponse` จาก Shared Types
 
 ### Shared Types
 
-Package `@spk-r5-parking-log/shared-types` exports `ViolationStatus` and `HealthCheckResponse` from `src/index.ts`. TypeScript build produces JavaScript and declaration files in `dist`.
+Package `@spk-r5-parking-log/shared-types` Export `ViolationStatus` และ `HealthCheckResponse` ผ่าน `src/index.ts` โดย TypeScript Build สร้าง JavaScript และ Type Declaration ไว้ใน `dist`
 
-## Workspace Commands
+## คำสั่ง Workspace
 
-Root scripts run development, build, lint, and formatting commands across packages. Package names remain exactly `frontend`, `backend`, and `@spk-r5-parking-log/shared-types` so filter commands resolve correctly.
+Root Scripts ใช้รัน Development, Build, Lint และ Format ครบทุก Package ชื่อ Package ต้องเป็น `frontend`, `backend` และ `@spk-r5-parking-log/shared-types` เพื่อให้ Filter Commands ทำงานถูกต้อง
 
-## Testing and Verification
+## การทดสอบและตรวจสอบ
 
-- Health endpoint behavior uses a test-first controller unit test.
-- Generated scaffold and configuration are verified through package builds and lint.
-- `pnpm install`, `pnpm build`, and `pnpm lint` must exit successfully.
-- Development servers must start together through `pnpm dev`.
-- HTTP checks must confirm frontend on port 3000 and exact health JSON on port 3001.
+- พัฒนา Health Endpoint แบบ Test-first ด้วย Controller Unit Test
+- ตรวจ Generated Scaffold และ Configuration ด้วย Build และ Lint ของแต่ละ Package
+- `pnpm install`, `pnpm build` และ `pnpm lint` ต้องจบด้วย Exit Code 0
+- Development Servers ต้องเริ่มพร้อมกันได้ด้วย `pnpm dev`
+- HTTP Checks ต้องยืนยันว่า Frontend ทำงานบน Port 3000 และ Health Endpoint บน Port 3001 ตอบ Exact JSON ตามที่กำหนด
 
-## Documentation
+## เอกสาร
 
-Root README covers overview, business purpose, stack, prerequisites, structure, setup, commands, service URLs, current scope, and future work. `.env.example`, `.gitignore`, and business rules match supplied requirements.
+Root README ต้องครอบคลุมภาพรวม วัตถุประสงค์ทางธุรกิจ Tech Stack, Prerequisites, โครงสร้าง การติดตั้ง คำสั่ง Service URLs, Scope ปัจจุบัน และงานในอนาคต ส่วน `.env.example`, `.gitignore` และ Business Rules ต้องตรงตาม Requirement ที่ให้มา
 
-## Constraints
+## ข้อจำกัด
 
-- Work directly in current `spk-r5-parking-log` root; never create a nested project root.
-- Use Node.js 22 LTS and pnpm.
-- Keep TypeScript strict and avoid unnecessary `any`.
-- Add no database, Prisma, authentication, Docker, production secrets, or real violation logic.
-- Add no dependency unrelated to this foundation.
+- ทำงานตรงใน Root `spk-r5-parking-log` ปัจจุบัน ห้ามสร้าง Project Root ซ้อน
+- ใช้ Node.js 22 LTS และ pnpm
+- ใช้ TypeScript Strict Mode และหลีกเลี่ยง `any` ที่ไม่จำเป็น
+- ห้ามเพิ่ม Database, Prisma, Authentication, Docker, Production Secrets หรือ Business Logic การกระทำผิดจริง
+- ห้ามเพิ่ม Dependency ที่ไม่เกี่ยวกับโครงสร้างเริ่มต้นนี้
