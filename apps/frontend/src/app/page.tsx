@@ -1,8 +1,7 @@
-import type { HealthCheckResponse } from '@spk-r5-parking-log/shared-types';
+import type { HealthCheckResponse } from "@spk-r5-parking-log/shared-types";
 
-const serviceStatus: HealthCheckResponse['status'] = 'ok';
-const apiUrl =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
+const serviceStatus: HealthCheckResponse["status"] = "ok";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 
 export default function Home() {
   return (

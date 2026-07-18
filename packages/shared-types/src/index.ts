@@ -1,10 +1,6 @@
-export type ViolationStatus =
-  | 'WARNING'
-  | 'PENDING_FINE'
-  | 'PAID'
-  | 'CANCELLED';
+export type ViolationStatus = "WARNING" | "PENDING_FINE" | "PAID" | "CANCELLED";
 
 export interface HealthCheckResponse {
-  status: 'ok';
+  status: "ok";
   service: string;
 }
