@@ -1,0 +1,17 @@
+{
+  "name": "spk-r5-parking-log",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend start:dev",
+    "build": "pnpm --recursive build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "lint": "pnpm --recursive lint",
+    "format": "pnpm --recursive format"
+  },
+  "devDependencies": {
+    "prettier": "latest"
+  }
+}
