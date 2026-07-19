@@ -44,7 +44,7 @@ export interface HouseRecord {
   cycles: CycleRecord[];
 }
 
-function mapFine(fine: FineRecord | null): FineResponse | null {
+export function mapFine(fine: FineRecord | null): FineResponse | null {
   if (!fine) return null;
   return {
     id: fine.id,
