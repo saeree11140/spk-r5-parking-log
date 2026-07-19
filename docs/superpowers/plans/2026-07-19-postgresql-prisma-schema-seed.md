@@ -641,6 +641,8 @@ git commit -m "feat: connect NestJS to PostgreSQL with Prisma"
 - Create: `apps/backend/src/database/house-seed.ts`
 - Create: `apps/backend/prisma/seed.ts`
 - Create: `apps/backend/test/database.e2e-spec.ts`
+- Modify: `apps/backend/package.json`
+- Modify: `apps/backend/test/jest-e2e.json`
 
 **Interfaces:**
 
@@ -758,6 +760,20 @@ main().catch((error: unknown) => {
 ```
 
 - [ ] **Step 6: เขียน Database E2E Tests**
+
+เพิ่ม `moduleNameMapper` ใน Jest Configuration ของ `apps/backend/package.json` และ `apps/backend/test/jest-e2e.json` เพื่อ Resolve `.js` Specifiers ใน Prisma Generated TypeScript:
+
+```json
+"moduleNameMapper": {
+  "^(\\.{1,2}/.*)\\.js$": "$1"
+}
+```
+
+เปลี่ยน `test:e2e` script ใน `apps/backend/package.json` เพื่อรองรับ Dynamic Import ของ Prisma Query Compiler:
+
+```json
+"test:e2e": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --config ./test/jest-e2e.json"
+```
 
 สร้าง `apps/backend/test/database.e2e-spec.ts`:
 
@@ -877,7 +893,7 @@ Expected: Seed ทั้งสองรอบ Exit 0; Health E2E และ Datab
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/backend/src/database/house-seed.ts apps/backend/src/database/house-seed.spec.ts apps/backend/prisma/seed.ts apps/backend/test/database.e2e-spec.ts
+git add apps/backend/src/database/house-seed.ts apps/backend/src/database/house-seed.spec.ts apps/backend/prisma/seed.ts apps/backend/test/database.e2e-spec.ts apps/backend/package.json apps/backend/test/jest-e2e.json
 git commit -m "feat: seed 164 houses idempotently"
 ```
 
