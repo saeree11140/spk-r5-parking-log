@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { ApiExceptionFilter } from './common/api-exception.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,7 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: true,
     }),
   );
+  app.useGlobalFilters(new ApiExceptionFilter());
 
   await app.listen(port);
 }
