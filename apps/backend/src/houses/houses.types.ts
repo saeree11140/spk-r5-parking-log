@@ -55,7 +55,7 @@ function mapFine(fine: FineRecord | null): FineResponse | null {
   };
 }
 
-function mapViolation(violation: ViolationRecord): ViolationResponse {
+export function mapViolation(violation: ViolationRecord): ViolationResponse {
   return {
     id: violation.id,
     sequenceNumber: violation.sequenceNumber,
@@ -68,7 +68,7 @@ function mapViolation(violation: ViolationRecord): ViolationResponse {
   };
 }
 
-function summarizeCycle(cycle: CycleRecord): CycleSummary {
+export function summarizeCycle(cycle: CycleRecord): CycleSummary {
   const activeViolations = cycle.violations.filter(
     ({ status }) => status !== 'CANCELLED',
   );
