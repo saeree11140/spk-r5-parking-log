@@ -1,5 +1,7 @@
 # เอกสารออกแบบ PostgreSQL, Prisma Schema และ Seed บ้าน 164 หลัง
 
+> **หมายเหตุ:** เอกสารนี้บันทึก Design ของระยะ Database Foundation ที่นำไปใช้แล้ว ส่วน Fine และ Payment Model ถูกแก้ไขภายหลังโดย [Core Parking API Design](./2026-07-19-core-parking-api-design.md) ซึ่งเป็นข้อกำหนดล่าสุดสำหรับ Migration ถัดไป
+
 ## เป้าหมาย
 
 เพิ่มชั้นข้อมูลให้ SPK R5 Parking Log ด้วย PostgreSQL และ Prisma ORM รองรับประวัติการจอดรถผิดระเบียบแยกตามบ้าน รอบการกระทำผิด ค่าปรับ การชำระเงิน หลักฐาน และ Audit Log พร้อม Seed บ้าน `R5-001` ถึง `R5-164`
