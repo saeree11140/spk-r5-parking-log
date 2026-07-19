@@ -1,4 +1,11 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 
 import { HouseCodeDto } from '../houses/house-code.dto';
 import { CancelViolationDto } from './cancel-violation.dto';
@@ -22,6 +29,7 @@ export class ViolationsController {
   }
 
   @Post(':houseCode/violations/:violationId/cancel')
+  @HttpCode(HttpStatus.OK)
   cancel(
     @Param() params: ViolationRouteDto,
     @Body() dto: CancelViolationDto,

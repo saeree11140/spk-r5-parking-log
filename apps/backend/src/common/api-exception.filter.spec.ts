@@ -57,4 +57,17 @@ describe('ApiExceptionFilter', () => {
       message: 'Internal server error',
     });
   });
+
+  it('maps exhausted serialization conflict to stable 409', () => {
+    const { host, status, json } = createHost();
+
+    new ApiExceptionFilter().catch({ code: 'P2034' }, host);
+
+    expect(status).toHaveBeenCalledWith(409);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 409,
+      code: 'CONCURRENT_MODIFICATION',
+      message: 'Concurrent modification, retry request',
+    });
+  });
 });

@@ -135,10 +135,54 @@ pnpm lint
 - Frontend: http://localhost:3000
 - Backend Health Check: http://localhost:3001/api/health
 
+## Core Parking API
+
+Routes:
+
+```text
+GET  /api/houses
+GET  /api/houses/:houseCode
+POST /api/houses/:houseCode/violations
+POST /api/houses/:houseCode/violations/:violationId/cancel
+POST /api/houses/:houseCode/violations/:violationId/mark-paid
+```
+
+Backend คำนวณลำดับและค่าปรับเอง: ครั้ง 1–2 ไม่คิดค่าปรับ, ครั้ง 3 คิด 1,000 บาท, ครั้ง 4 ขึ้นไปคิดเพิ่มรายการละ 500 บาท ตัวอย่างครั้ง 1–5 รวม 2,000 บาท
+
+สร้าง Violation:
+
+```bash
+curl -X POST http://localhost:3001/api/houses/R5-001/violations \
+  -H 'Content-Type: application/json' \
+  -d '{"occurredAt":"2026-07-19T10:30:00+07:00","note":"จอดขวางทางเข้า"}'
+```
+
+ยกเลิก Violation ก่อนมี Fine ชำระแล้ว:
+
+```bash
+curl -X POST http://localhost:3001/api/houses/R5-001/violations/VIOLATION_UUID/cancel \
+  -H 'Content-Type: application/json' \
+  -d '{"reason":"บันทึกผิดหลัง"}'
+```
+
+บันทึก Fine ว่าชำระแล้ว:
+
+```bash
+curl -X POST http://localhost:3001/api/houses/R5-001/violations/VIOLATION_UUID/mark-paid \
+  -H 'Content-Type: application/json' \
+  -d '{"paidAt":"2026-07-19T15:00:00+07:00","reference":"ใบเสร็จ-001"}'
+```
+
+Mark-paid เก็บสถานะการชำระ Offline เท่านั้น ระบบไม่รับเงินจริง ไม่เชื่อม Payment Gateway และไม่เก็บข้อมูลบัตร Cycle ปิดเมื่อ Fine ที่ไม่ถูกยกเลิกทุกใบเป็น `PAID`
+
 ## Current Scope
 
 - Static Next.js status page
 - NestJS health endpoint
+- House Summary และ House Detail API
+- Create/Cancel Violation พร้อม Backend Resequence
+- Fine แยกราย Violation และ Offline Paid Status
+- Serializable Transaction, Concurrency Retry และ Audit Log
 - Shared TypeScript types และ Type Declaration Output
 - Business Rules Documentation
 - PostgreSQL 18.4 บน Docker Compose
@@ -146,11 +190,10 @@ pnpm lint
 - NestJS DatabaseModule และ PrismaService
 - Seed บ้าน 164 หลังแบบ Idempotent
 
-ยังไม่มี Authentication, CRUD API, Object Storage และ Business Logic การกระทำผิดจริง
+ยังไม่มี Authentication, Authorization, Evidence Upload, Object Storage, Frontend Integration และ Online Payment
 
 ## Future Development Steps
 
-1. CRUD API สำหรับบ้านและการกระทำผิด
-2. Business Service สำหรับคำนวณลำดับและค่าปรับ
-3. Authentication และ Authorization
-4. Object Storage สำหรับรูปหลักฐาน
+1. Authentication และ Authorization
+2. Frontend Integration
+3. Evidence Upload และ Object Storage

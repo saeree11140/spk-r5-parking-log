@@ -38,6 +38,22 @@ export class ApiExceptionFilter implements ExceptionFilter {
       };
     }
 
+    if (
+      typeof exception === 'object' &&
+      exception !== null &&
+      'code' in exception &&
+      exception.code === 'P2034'
+    ) {
+      return {
+        statusCode: 409,
+        body: {
+          statusCode: 409,
+          code: 'CONCURRENT_MODIFICATION',
+          message: 'Concurrent modification, retry request',
+        },
+      };
+    }
+
     if (exception instanceof HttpException) {
       const statusCode = exception.getStatus();
       const message = this.httpMessage(exception.getResponse());
