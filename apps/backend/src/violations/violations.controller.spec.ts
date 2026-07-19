@@ -13,4 +13,26 @@ describe('ViolationsController', () => {
     ).resolves.toEqual({ violation: { id: 'v-1' } });
     expect(create).toHaveBeenCalledWith('R5-001', dto);
   });
+
+  it('delegates violation cancellation using route identifiers', async () => {
+    const cancel = jest.fn().mockResolvedValue({
+      violation: { id: 'v-1', status: 'CANCELLED' },
+    });
+    const controller = new ViolationsController({
+      cancel,
+    } as unknown as ViolationsService);
+    const params = {
+      houseCode: 'R5-001',
+      violationId: '00000000-0000-4000-8000-000000000001',
+    };
+    const dto = { reason: 'wrong house' };
+
+    await controller.cancel(params, dto);
+
+    expect(cancel).toHaveBeenCalledWith(
+      params.houseCode,
+      params.violationId,
+      dto,
+    );
+  });
 });

@@ -12,6 +12,7 @@ import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import { mapViolation, summarizeCycle } from '../houses/houses.types';
 import type { CreateViolationDto } from './create-violation.dto';
+import type { CancelViolationDto } from './cancel-violation.dto';
 import { resequenceCycle } from './violation-resequence';
 
 export interface ViolationMutationResponse {
@@ -63,6 +64,100 @@ export class ViolationsService {
       });
 
       return this.loadMutationResponse(tx, violation.id, cycle.id);
+    });
+  }
+
+  async cancel(
+    houseCode: string,
+    violationId: string,
+    dto: CancelViolationDto,
+  ): Promise<ViolationMutationResponse> {
+    return runSerializable(this.prisma, async (tx) => {
+      const violation = await tx.parkingViolation.findFirst({
+        where: { id: violationId, cycle: { house: { code: houseCode } } },
+        include: { cycle: true, fine: true },
+      });
+      if (!violation) {
+        throw new DomainError(
+          404,
+          'VIOLATION_NOT_FOUND',
+          'Violation not found',
+        );
+      }
+      if (violation.cycle.status !== 'OPEN') {
+        throw new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed');
+      }
+      if (violation.status === 'CANCELLED') {
+        throw new DomainError(
+          409,
+          'VIOLATION_ALREADY_CANCELLED',
+          'Violation is already cancelled',
+        );
+      }
+
+      const paidFineCount = await tx.fine.count({
+        where: { status: 'PAID', violation: { cycleId: violation.cycleId } },
+      });
+      if (paidFineCount > 0) {
+        throw new DomainError(
+          409,
+          'PAID_CYCLE_IMMUTABLE',
+          'Paid cycle cannot be modified',
+        );
+      }
+
+      const cancelledAt = new Date();
+      const cancelled = await tx.parkingViolation.update({
+        where: { id: violation.id },
+        data: {
+          sequenceNumber: null,
+          status: 'CANCELLED',
+          cancelledAt,
+          cancellationReason: dto.reason,
+        },
+      });
+      if (violation.fine && violation.fine.status !== 'CANCELLED') {
+        await tx.fine.update({
+          where: { id: violation.fine.id },
+          data: {
+            amountBaht: 0,
+            status: 'CANCELLED',
+            paidAt: null,
+            reference: null,
+          },
+        });
+        await writeAudit(
+          tx,
+          'Fine',
+          violation.fine.id,
+          'CANCEL',
+          {
+            status: violation.fine.status,
+            amountBaht: violation.fine.amountBaht,
+          },
+          { status: 'CANCELLED', amountBaht: 0 },
+        );
+      }
+
+      await resequenceCycle(tx, violation.cycleId);
+      await writeAudit(
+        tx,
+        'ParkingViolation',
+        violation.id,
+        'CANCEL',
+        {
+          sequenceNumber: violation.sequenceNumber,
+          status: violation.status,
+        },
+        {
+          sequenceNumber: null,
+          status: cancelled.status,
+          cancelledAt: cancelledAt.toISOString(),
+          cancellationReason: dto.reason,
+        },
+      );
+
+      return this.loadMutationResponse(tx, violation.id, violation.cycleId);
     });
   }
 
