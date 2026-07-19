@@ -40,17 +40,23 @@ describe('Database and house seed (e2e)', () => {
         'houses_sequence_number_positive',
         'violation_cycles_cycle_number_positive',
         'violation_cycles_closed_at_matches_status',
-        'parking_violations_sequence_matches_status',
-        'fines_amount_baht_non_negative',
-        'fine_payments_amount_baht_positive',
+        'parking_violations_state_consistent',
+        'fines_state_consistent',
         'evidence_size_bytes_non_negative'
       )
+    `;
+    const legacyTables = await prisma.$queryRaw<Array<{ table_name: string }>>`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_name = 'fine_payments'
     `;
 
     expect(indexes).toEqual([
       { indexname: 'violation_cycles_one_open_per_house' },
     ]);
-    expect(constraints).toHaveLength(7);
+    expect(constraints).toHaveLength(6);
+    expect(legacyTables).toEqual([]);
   });
 
   it('seeds 164 unique ordered houses', async () => {

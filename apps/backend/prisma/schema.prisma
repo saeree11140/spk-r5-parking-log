@@ -38,6 +38,7 @@ enum AuditAction {
   CANCEL
   PAY
   RESEQUENCE
+  CLOSE
 
   @@map("audit_action")
 }
@@ -73,7 +74,6 @@ model ViolationCycle {
   updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   house       House              @relation(fields: [houseId], references: [id], onDelete: Restrict)
   violations  ParkingViolation[]
-  fine        Fine?
 
   @@unique([houseId, cycleNumber])
   @@index([houseId])
@@ -81,16 +81,19 @@ model ViolationCycle {
 }
 
 model ParkingViolation {
-  id             String          @id @default(uuid()) @db.Uuid
-  cycleId        String          @map("cycle_id") @db.Uuid
-  sequenceNumber Int?            @map("sequence_number")
-  occurredAt     DateTime        @map("occurred_at") @db.Timestamptz(3)
-  status         ViolationStatus
-  note           String?
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
-  cycle          ViolationCycle  @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  evidence       Evidence[]
+  id                 String          @id @default(uuid()) @db.Uuid
+  cycleId            String          @map("cycle_id") @db.Uuid
+  sequenceNumber     Int?            @map("sequence_number")
+  occurredAt         DateTime        @map("occurred_at") @db.Timestamptz(3)
+  status             ViolationStatus
+  note               String?
+  cancelledAt        DateTime?       @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason String?         @map("cancellation_reason") @db.VarChar(500)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cycle              ViolationCycle  @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  fine               Fine?
+  evidence           Evidence[]
 
   @@unique([cycleId, sequenceNumber])
   @@index([cycleId])
@@ -99,28 +102,17 @@ model ParkingViolation {
 }
 
 model Fine {
-  id         String         @id @default(uuid()) @db.Uuid
-  cycleId    String         @unique @map("cycle_id") @db.Uuid
-  amountBaht Int            @map("amount_baht")
-  status     FineStatus
-  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  cycle      ViolationCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  payment    FinePayment?
+  id          String           @id @default(uuid()) @db.Uuid
+  violationId String           @unique @map("violation_id") @db.Uuid
+  amountBaht  Int              @map("amount_baht")
+  status      FineStatus
+  paidAt      DateTime?        @map("paid_at") @db.Timestamptz(3)
+  reference   String?          @db.VarChar(128)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  violation   ParkingViolation @relation(fields: [violationId], references: [id], onDelete: Restrict)
 
   @@map("fines")
-}
-
-model FinePayment {
-  id         String   @id @default(uuid()) @db.Uuid
-  fineId     String   @unique @map("fine_id") @db.Uuid
-  amountBaht Int      @map("amount_baht")
-  paidAt     DateTime @map("paid_at") @db.Timestamptz(3)
-  reference  String?  @db.VarChar(128)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  fine       Fine     @relation(fields: [fineId], references: [id], onDelete: Restrict)
-
-  @@map("fine_payments")
 }
 
 model Evidence {
