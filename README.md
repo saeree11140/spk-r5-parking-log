@@ -12,15 +12,18 @@ Monorepo สำหรับระบบบันทึกและติดต�
 
 - Frontend: Next.js, App Router, TypeScript, Tailwind CSS
 - Backend: NestJS, TypeScript
+- Database: PostgreSQL 18.4
+- ORM: Prisma ORM 7 with PostgreSQL Driver Adapter
+- Local Infrastructure: Docker Compose
 - Package Manager: pnpm
 - Monorepo: pnpm workspace
-- Future: PostgreSQL, Prisma, Docker Compose
 
 ## Prerequisites
 
 - Node.js 22 LTS
 - pnpm
 - Git
+- Docker Desktop หรือ OrbStack
 
 ## Project Structure
 
@@ -59,6 +62,31 @@ Backend อ่านตัวแปรจาก Process Environment หากไ
 ```bash
 BACKEND_PORT=3001 FRONTEND_URL=http://localhost:3000 pnpm dev:backend
 ```
+
+## Database Setup
+
+สร้าง Local Environment:
+
+```bash
+cp .env.example .env
+```
+
+เริ่ม PostgreSQL, Apply Migration และ Seed บ้าน 164 หลัง:
+
+```bash
+pnpm db:up
+pnpm db:migrate
+pnpm db:seed
+pnpm db:status
+```
+
+หยุด PostgreSQL โดยเก็บข้อมูลใน Named Volume:
+
+```bash
+pnpm db:down
+```
+
+Seed รันซ้ำได้และไม่เขียนทับข้อมูลบ้านเดิม รหัสบ้านอยู่ระหว่าง `R5-001` ถึง `R5-164`
 
 ## Development Commands
 
@@ -113,12 +141,16 @@ pnpm lint
 - NestJS health endpoint
 - Shared TypeScript types และ Type Declaration Output
 - Business Rules Documentation
+- PostgreSQL 18.4 บน Docker Compose
+- Prisma Schema และ Initial Migration
+- NestJS DatabaseModule และ PrismaService
+- Seed บ้าน 164 หลังแบบ Idempotent
 
-ยังไม่มี Database, Prisma, Authentication, Docker และ Business Logic การกระทำผิดจริง
+ยังไม่มี Authentication, CRUD API, Object Storage และ Business Logic การกระทำผิดจริง
 
 ## Future Development Steps
 
-1. PostgreSQL
-2. Prisma
-3. Database Schema
-4. Seed ข้อมูลบ้าน 164 หลัง
+1. CRUD API สำหรับบ้านและการกระทำผิด
+2. Business Service สำหรับคำนวณลำดับและค่าปรับ
+3. Authentication และ Authorization
+4. Object Storage สำหรับรูปหลักฐาน

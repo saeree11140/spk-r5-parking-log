@@ -955,7 +955,8 @@ Run:
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
-pnpm exec prettier --check compose.yaml pnpm-workspace.yaml package.json apps/backend/package.json apps/backend/prisma.config.ts apps/backend/prisma apps/backend/src/database apps/backend/test/database.e2e-spec.ts README.md
+pnpm exec prettier --check compose.yaml pnpm-workspace.yaml package.json apps/backend/package.json apps/backend/prisma.config.ts apps/backend/src/database apps/backend/test/database.e2e-spec.ts README.md
+pnpm --filter backend exec prisma format
 pnpm --filter backend prisma:validate
 pnpm db:status
 pnpm --filter backend test --runInBand
