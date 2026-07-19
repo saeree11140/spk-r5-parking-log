@@ -506,7 +506,7 @@ Run:
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
-pnpm --filter backend test -- environment.spec.ts --runInBand
+pnpm --filter backend test environment.spec.ts --runInBand
 ```
 
 Expected: FAIL ด้วย `Cannot find module './environment'`
@@ -540,7 +540,7 @@ Run:
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
-pnpm --filter backend test -- environment.spec.ts --runInBand
+pnpm --filter backend test environment.spec.ts --runInBand
 ```
 
 Expected: 2 Tests PASS
@@ -672,7 +672,7 @@ Run:
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
-pnpm --filter backend test -- house-seed.spec.ts --runInBand
+pnpm --filter backend test house-seed.spec.ts --runInBand
 ```
 
 Expected: FAIL ด้วย `Cannot find module './house-seed'`
@@ -719,7 +719,7 @@ Run:
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
-pnpm --filter backend test -- house-seed.spec.ts --runInBand
+pnpm --filter backend test house-seed.spec.ts --runInBand
 ```
 
 Expected: 2 Tests PASS
@@ -865,7 +865,7 @@ Run:
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
 pnpm db:seed
 pnpm db:seed
-pnpm --filter backend test:e2e -- --runInBand
+pnpm --filter backend test:e2e --runInBand
 ```
 
 Expected: Seed ทั้งสองรอบ Exit 0; Health E2E และ Database E2E ทุก Test PASS
@@ -935,11 +935,11 @@ Run:
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.17.0/bin:$PATH"
-pnpm exec prettier --check compose.yaml .env.example package.json apps/backend/package.json apps/backend/prisma.config.ts apps/backend/prisma apps/backend/src/database apps/backend/test/database.e2e-spec.ts README.md
+pnpm exec prettier --check compose.yaml pnpm-workspace.yaml package.json apps/backend/package.json apps/backend/prisma.config.ts apps/backend/prisma apps/backend/src/database apps/backend/test/database.e2e-spec.ts README.md
 pnpm --filter backend prisma:validate
 pnpm db:status
-pnpm --filter backend test -- --runInBand
-pnpm --filter backend test:e2e -- --runInBand
+pnpm --filter backend test --runInBand
+pnpm --filter backend test:e2e --runInBand
 pnpm lint
 pnpm build
 git diff --check
