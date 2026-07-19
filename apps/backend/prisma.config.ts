@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, env } from 'prisma/config';
 
 const backendDirectory = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(backendDirectory, '../../.env') });
+config({ path: resolve(backendDirectory, '../../.env'), quiet: true });
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

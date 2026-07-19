@@ -205,7 +205,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, env } from 'prisma/config';
 
 const backendDirectory = dirname(fileURLToPath(import.meta.url));
-config({ path: resolve(backendDirectory, '../../.env') });
+config({ path: resolve(backendDirectory, '../../.env'), quiet: true });
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
@@ -470,6 +470,8 @@ git commit -m "feat: add parking domain Prisma schema"
 - Create: `apps/backend/src/database/prisma.service.ts`
 - Create: `apps/backend/src/database/database.module.ts`
 - Modify: `apps/backend/src/app.module.ts`
+- Modify: `apps/backend/tsconfig.build.json`
+- Modify: `apps/backend/eslint.config.mjs`
 
 **Interfaces:**
 
@@ -519,7 +521,7 @@ Expected: FAIL ด้วย `Cannot find module './environment'`
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
-config({ path: resolve(__dirname, '../../../../.env') });
+config({ path: resolve(__dirname, '../../../../.env'), quiet: true });
 
 export function requireDatabaseUrl(
   environment: NodeJS.ProcessEnv = process.env,
@@ -612,6 +614,8 @@ import { HealthModule } from './health/health.module';
 export class AppModule {}
 ```
 
+เพิ่ม `prisma` และ `prisma.config.ts` ใน `exclude` ของ `apps/backend/tsconfig.build.json` เพื่อให้ Nest Build Compile เฉพาะ Application Source และเพิ่ม `src/generated/prisma/**` ใน `ignores` ของ `apps/backend/eslint.config.mjs` เพราะ Generated Client ไม่ใช่ Source ที่แก้ด้วยมือ
+
 - [ ] **Step 6: Build และ Commit**
 
 Run:
@@ -625,7 +629,7 @@ pnpm --filter backend lint
 Expected: Build และ Lint Exit 0
 
 ```bash
-git add apps/backend/src/database apps/backend/src/app.module.ts
+git add apps/backend/src/database apps/backend/src/app.module.ts apps/backend/tsconfig.build.json apps/backend/eslint.config.mjs apps/backend/prisma.config.ts
 git commit -m "feat: connect NestJS to PostgreSQL with Prisma"
 ```
 
