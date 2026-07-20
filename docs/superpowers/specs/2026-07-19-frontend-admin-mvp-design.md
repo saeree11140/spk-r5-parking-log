@@ -49,6 +49,7 @@
 - Zustand เก็บเฉพาะ client UI state ได้แก่ Dashboard search, filter และ sidebar state
 - date-fns จัดการ parse, format, compare และแปลงวันเวลาของ form
 - Axios เป็น HTTP client กลางสำหรับ TanStack Query
+- Lucide React เป็น icon library เดียวของระบบ
 - Vitest และ React Testing Library ใช้ทดสอบ unit/component
 
 ห้ามเก็บ House API data ใน Zustand เพราะ TanStack Query เป็น source of truth ของ server state
@@ -143,6 +144,8 @@ Violation ที่ `CANCELLED` อยู่ท้าย Cycle และแส�
 รหัสบ้าน เช่น `R5-164` ใช้กรอบสีน้ำเงินและตัวเลขทรงป้ายถนน เป็นจุดเด่นเพียงจุดเดียว ส่วนอื่นใช้ spacing, border และ hierarchy แบบเรียบ
 
 Motion จำกัดเฉพาะ modal enter/exit, button feedback และ skeleton ลดหรือปิดเมื่อ `prefers-reduced-motion: reduce`
+
+ใช้ Lucide React สำหรับ navigation, search, filter, refresh และ action icons กำหนดขนาดและ stroke ผ่าน component style กลาง Icon-only button ต้องมี `aria-label`; action สำคัญใช้ icon คู่ข้อความ ห้ามใช้ emoji หรือ icon library อื่นปน
 
 ## Client Architecture
 
@@ -243,6 +246,7 @@ Component ห้าม parse หรือ format วันที่เองโ�
 
 ### Unit Tests
 
+- ใช้ Vitest, `jsdom` environment และ shared test setup
 - Zod schemas: required, trim, length, future datetime และ paid-before-violation
 - Date utilities: ISO parse, Thai format, local datetime conversion และ boundary comparison
 - Axios API client: success, domain error, timeout และ network error
@@ -251,6 +255,7 @@ Component ห้าม parse หรือ format วันที่เองโ�
 
 ### Component Tests
 
+- ใช้ React Testing Library และ `@testing-library/user-event` บน Vitest
 - Dashboard loading, error, empty และ table data
 - Search/filter interaction
 - House Detail cycle/violation ordering
