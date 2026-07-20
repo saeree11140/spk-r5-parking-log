@@ -48,7 +48,7 @@
 - `@hookform/resolvers` เชื่อม Zod กับ React Hook Form
 - Zustand เก็บเฉพาะ client UI state ได้แก่ Dashboard search, filter และ sidebar state
 - date-fns จัดการ parse, format, compare และแปลงวันเวลาของ form
-- Native `fetch` อยู่หลัง typed API client กลาง
+- Axios เป็น HTTP client กลางสำหรับ TanStack Query
 - Vitest และ React Testing Library ใช้ทดสอบ unit/component
 
 ห้ามเก็บ House API data ใน Zustand เพราะ TanStack Query เป็น source of truth ของ server state
@@ -152,7 +152,7 @@ Root client provider สร้าง `QueryClient` หนึ่ง instance แ�
 
 ### API Client
 
-API client กลางรับ base URL จาก `NEXT_PUBLIC_API_URL` และมี methods:
+สร้าง Axios instance หนึ่งตัว รับ `baseURL` จาก `NEXT_PUBLIC_API_URL`, ตั้ง timeout 10 วินาที และใช้ JSON เป็นค่าเริ่มต้น API client มี methods:
 
 - `getHouses()`
 - `getHouse(houseCode)`
@@ -160,7 +160,7 @@ API client กลางรับ base URL จาก `NEXT_PUBLIC_API_URL` แล
 - `cancelViolation(houseCode, violationId, input)`
 - `markFinePaid(houseCode, violationId, input)`
 
-Non-2xx response ถูก parse เป็น `ApiError` จาก `{ statusCode, code, message }` ถ้า parse ไม่ได้ใช้ Network/Unknown error ที่ไม่เปิดเผยข้อมูลภายใน
+Response interceptor แปลง non-2xx response เป็น `ApiError` จาก `{ statusCode, code, message }` ถ้า parse ไม่ได้ใช้ Network/Unknown error ที่ไม่เปิดเผยข้อมูลภายใน TanStack Query เรียก API client นี้เท่านั้น Component ห้ามเรียก Axios โดยตรง
 
 ### Query Keys
 
@@ -245,7 +245,7 @@ Component ห้าม parse หรือ format วันที่เองโ�
 
 - Zod schemas: required, trim, length, future datetime และ paid-before-violation
 - Date utilities: ISO parse, Thai format, local datetime conversion และ boundary comparison
-- API client: success, domain error และ network error
+- Axios API client: success, domain error, timeout และ network error
 - Zustand store: search/filter/reset/sidebar
 - Dashboard selectors: KPI และ filter
 
