@@ -47,6 +47,7 @@
 - Zod เป็น client validation schema
 - `@hookform/resolvers` เชื่อม Zod กับ React Hook Form
 - Zustand เก็บเฉพาะ client UI state ได้แก่ Dashboard search, filter และ sidebar state
+- date-fns จัดการ parse, format, compare และแปลงวันเวลาของ form
 - Native `fetch` อยู่หลัง typed API client กลาง
 - Vitest และ React Testing Library ใช้ทดสอบ unit/component
 
@@ -179,6 +180,18 @@ Store มี:
 
 ไม่ persist ค่าใน local storage ใน MVP เพื่อไม่ให้ filter เก่าทำให้ผู้ใช้เข้าใจว่าข้อมูลหาย
 
+### Date Utilities
+
+สร้าง date utility กลางด้วย date-fns เพื่อให้ทุกหน้าจอใช้กฎเดียวกัน:
+
+- `formatThaiDateTime(value)` แสดง `dd/MM/yyyy HH:mm` ด้วย locale ไทย
+- `toDateTimeLocalValue(value)` แปลง ISO จาก API เป็นค่าเริ่มต้นของ `datetime-local`
+- `localDateTimeToIso(value)` parse ค่า `datetime-local` ตาม timezone เครื่องผู้ใช้แล้วส่งเป็น ISO 8601 ด้วย `toISOString()`
+- `isFutureDateTime(value, now)` ตรวจวันเวลาอนาคต
+- `isBeforeViolation(value, occurredAt)` ตรวจเวลาชำระก่อนเวลาเกิดเหตุ
+
+Component ห้าม parse หรือ format วันที่เองโดยตรง API เก็บและส่ง ISO timestamp; Frontend แสดงเวลาไทยและส่ง ISO พร้อม timezone กลับ Backend
+
 ## Forms และ Validation
 
 ### Create Violation
@@ -186,6 +199,7 @@ Store มี:
 - `occurredAt`: required, local datetime, ห้ามอนาคต
 - `note`: optional, trim, สูงสุด 1,000 ตัวอักษร
 - แปลง local datetime เป็น ISO 8601 พร้อม timezone ก่อนส่ง
+- ใช้ date-fns date utility กลางสำหรับ parse และตรวจอนาคต
 
 ### Cancel Violation
 
@@ -198,6 +212,7 @@ Store มี:
 - `paidAt`: required, local datetime, ห้ามอนาคต และห้ามก่อน `occurredAt`
 - `reference`: optional, trim, สูงสุด 128 ตัวอักษร
 - ไม่มี input `amountBaht`
+- ใช้ date-fns เปรียบเทียบ `paidAt` กับ `occurredAt`
 - แสดง Confirmation เพราะ `PAID` ย้อนกลับไม่ได้ใน scope นี้
 
 ทุก form disable submit ระหว่าง mutation เพื่อป้องกัน double submit Backend ยังเป็นผู้ตรวจ business rules ขั้นสุดท้าย
@@ -229,6 +244,7 @@ Store มี:
 ### Unit Tests
 
 - Zod schemas: required, trim, length, future datetime และ paid-before-violation
+- Date utilities: ISO parse, Thai format, local datetime conversion และ boundary comparison
 - API client: success, domain error และ network error
 - Zustand store: search/filter/reset/sidebar
 - Dashboard selectors: KPI และ filter
