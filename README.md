@@ -177,7 +177,11 @@ Mark-paid เก็บสถานะการชำระ Offline เท่า�
 
 ## Current Scope
 
-- Static Next.js status page
+- Desktop-first Admin Dashboard สำหรับบ้าน 164 หลัง พร้อม Search และ Filter
+- House Detail, Cycle History และ Violation/Fine Workflows
+- React Hook Form + Zod, TanStack Query + Axios, Zustand และ date-fns
+- Lucide React Icons และ Vitest/Testing Library
+- Static HTML Routes สำหรับ Dashboard และบ้าน `R5-001` ถึง `R5-164`
 - NestJS health endpoint
 - House Summary และ House Detail API
 - Create/Cancel Violation พร้อม Backend Resequence
@@ -190,10 +194,10 @@ Mark-paid เก็บสถานะการชำระ Offline เท่า�
 - NestJS DatabaseModule และ PrismaService
 - Seed บ้าน 164 หลังแบบ Idempotent
 
-ยังไม่มี Authentication, Authorization, Evidence Upload, Object Storage, Frontend Integration และ Online Payment
+ยังไม่มี Authentication, Authorization, Evidence Upload, Object Storage และ Online Payment
 
 ## Future Development Steps
 
 1. Authentication และ Authorization
-2. Frontend Integration
-3. Evidence Upload และ Object Storage
+2. Evidence Upload และ Object Storage
+3. Production Deployment และ Monitoring

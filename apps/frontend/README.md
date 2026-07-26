@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SPK R5 Parking Log — Frontend
 
-## Getting Started
+หน้า Admin สำหรับตรวจสอบบ้าน 164 หลัง บันทึกและยกเลิก Violation และปรับสถานะ Fine ว่าชำระแล้ว ระบบออกแบบให้ใช้งานบน Desktop เป็นหลักและรองรับ Mobile
 
-First, run the development server:
+## ความสามารถปัจจุบัน
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Dashboard สรุปจำนวนบ้าน, Violation, Fine รอชำระ และยอดค้าง
+- ค้นหาบ้านและกรองตามสถานะ
+- หน้ารายละเอียดบ้าน `R5-001` ถึง `R5-164`
+- แสดง Cycle และประวัติ Violation ตามลำดับที่ Backend คำนวณ
+- เพิ่มและยกเลิก Violation
+- ปรับสถานะ Fine เป็นชำระแล้วแบบ Offline
+- แสดงวันที่เวลาไทย เขตเวลา Asia/Bangkok และปีพุทธศักราช
+- รองรับ Keyboard, Focus Management และ Reduced Motion
+
+ระบบนี้ไม่รับชำระเงินจริง ไม่เชื่อม Payment Gateway และไม่มีช่องกรอกยอดเงิน
+
+## Tech Stack
+
+- Next.js App Router และ TypeScript
+- TanStack Query และ Axios สำหรับ Server State/API
+- React Hook Form และ Zod สำหรับ Form/Validation
+- Zustand สำหรับ UI State ของ Dashboard
+- date-fns สำหรับวันที่เวลา
+- Lucide React สำหรับ Icon
+- Vitest และ Testing Library สำหรับ Test
+
+## Environment
+
+สร้างไฟล์ `apps/frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+หากรัน Frontend ด้วย Port อื่น ต้องตั้ง `FRONTEND_URL` ของ Backend ให้ตรงกัน เช่น:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+FRONTEND_URL=http://localhost:3100 pnpm dev:backend
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+จาก Root ของ Monorepo:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm install
+pnpm db:up
+pnpm db:migrate
+pnpm db:seed
+pnpm dev:backend
+pnpm dev:frontend
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+เปิด `http://localhost:3000`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+หรือรัน Frontend แยก:
 
-## Deploy on Vercel
+```bash
+pnpm --filter frontend dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Quality Checks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm --filter frontend test:run
+pnpm --filter frontend typecheck
+pnpm --filter frontend lint
+pnpm --filter frontend build
+```
+
+## Static Routes
+
+Build จะสร้าง Static HTML สำหรับ Dashboard และบ้านทั้ง 164 หลัง:
+
+```text
+/
+/houses/R5-001
+...
+/houses/R5-164
+```
+
+ผลลัพธ์อยู่ใน `apps/frontend/out` แต่ข้อมูลจริงยังโหลดจาก Backend API ตอนใช้งาน
