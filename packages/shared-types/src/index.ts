@@ -62,3 +62,34 @@ export interface HealthCheckResponse {
   status: "ok";
   service: string;
 }
+
+export interface CreateViolationInput {
+  occurredAt: string;
+  note?: string;
+}
+
+export interface CancelViolationInput {
+  reason: string;
+}
+
+export interface MarkFinePaidInput {
+  paidAt: string;
+  reference?: string;
+}
+
+export interface ViolationMutationResponse {
+  violation: ViolationResponse;
+  currentCycle: CycleSummary;
+}
+
+export interface MarkFinePaidResponse {
+  fine: FineResponse;
+  violation: ViolationResponse;
+  cycleClosed: boolean;
+}
+
+export interface ApiErrorResponse {
+  statusCode: number;
+  code: string;
+  message: string;
+}
