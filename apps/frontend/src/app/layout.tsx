@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
+import { Chakra_Petch, Noto_Sans_Thai } from "next/font/google";
 
+import { AppShell } from "@/components/layout/app-shell";
+
+import { Providers } from "./providers";
 import "./globals.css";
 
+const notoSansThai = Noto_Sans_Thai({
+  subsets: ["latin", "thai"],
+  variable: "--font-body",
+});
+
+const chakraPetch = Chakra_Petch({
+  subsets: ["latin", "thai"],
+  variable: "--font-system",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
-  title: "SPK R5 Parking Log",
-  description: "Parking Violation Management System",
+  title: "SPK R5 Parking Log | ระบบจัดการการจอดรถ",
+  description: "ระบบจัดการ Violation และ Fine สำหรับหมู่บ้าน SPK R5",
 };
 
 export default function RootLayout({
@@ -13,8 +28,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html
+      className={`${notoSansThai.variable} ${chakraPetch.variable}`}
+      lang="th"
+    >
+      <body>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
+      </body>
     </html>
   );
 }
