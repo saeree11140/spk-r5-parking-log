@@ -230,4 +230,36 @@ describe("HouseDetailPage", () => {
 
     expect(parkingApi.getHouse).toHaveBeenCalledTimes(2);
   });
+
+  it("opens the selected create, cancel and mark-paid dialogs", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
+    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await screen.findByRole("heading", { name: "R5-001" });
+
+    await user.click(screen.getByRole("button", { name: "เพิ่ม Violation" }));
+    expect(
+      screen.getByRole("dialog", { name: "เพิ่ม Violation" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ปิด" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "ยกเลิก Violation ครั้งที่ 2" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "ยกเลิก Violation ครั้งที่ 2" }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ปิด" }));
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "บันทึกชำระ Violation ครั้งที่ 3",
+      }),
+    );
+    expect(
+      screen.getByRole("dialog", {
+        name: "บันทึกชำระ Fine ครั้งที่ 3",
+      }),
+    ).toBeInTheDocument();
+  });
 });

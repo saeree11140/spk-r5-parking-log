@@ -1,15 +1,21 @@
 "use client";
 
+import type { ViolationResponse } from "@spk-r5-parking-log/shared-types";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
+  SuccessNotice,
 } from "@/components/ui/feedback";
+import { MarkFinePaidModal } from "@/features/payments/mark-fine-paid-modal";
+import { CancelViolationModal } from "@/features/violations/cancel-violation-modal";
+import { CreateViolationModal } from "@/features/violations/create-violation-modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { parkingApi } from "@/lib/api/parking-api";
 import { queryKeys } from "@/lib/query/keys";
@@ -17,7 +23,15 @@ import { queryKeys } from "@/lib/query/keys";
 import { CycleHistory } from "./cycle-history";
 import { HouseSummary } from "./house-summary";
 
+type ActiveDialog =
+  | { type: "create" }
+  | { type: "cancel"; violation: ViolationResponse }
+  | { type: "markPaid"; violation: ViolationResponse }
+  | null;
+
 export function HouseDetailPage({ houseCode }: { houseCode: string }) {
+  const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const houseQuery = useQuery({
     queryFn: () => parkingApi.getHouse(houseCode),
     queryKey: queryKeys.house(houseCode),
@@ -80,12 +94,22 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
             รีเฟรช
           </Button>
           {house.isActive ? (
-            <Button icon={Plus} variant="primary">
+            <Button
+              icon={Plus}
+              onClick={() => {
+                setSuccessMessage(null);
+                setActiveDialog({ type: "create" });
+              }}
+              variant="primary"
+            >
               เพิ่ม Violation
             </Button>
           ) : null}
         </div>
       </header>
+      {successMessage ? (
+        <SuccessNotice>{successMessage}</SuccessNotice>
+      ) : null}
       <HouseSummary currentCycle={currentCycle} />
       {house.cycles.length === 0 ? (
         <EmptyState
@@ -93,8 +117,42 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
           title="ยังไม่มีประวัติ Violation"
         />
       ) : (
-        <CycleHistory cycles={house.cycles} />
+        <CycleHistory
+          cycles={house.cycles}
+          onCancelViolation={(violation) => {
+            setSuccessMessage(null);
+            setActiveDialog({ type: "cancel", violation });
+          }}
+          onMarkPaid={(violation) => {
+            setSuccessMessage(null);
+            setActiveDialog({ type: "markPaid", violation });
+          }}
+        />
       )}
+      <CreateViolationModal
+        houseCode={houseCode}
+        onClose={() => setActiveDialog(null)}
+        onSuccess={setSuccessMessage}
+        open={activeDialog?.type === "create"}
+      />
+      {activeDialog?.type === "cancel" ? (
+        <CancelViolationModal
+          houseCode={houseCode}
+          onClose={() => setActiveDialog(null)}
+          onSuccess={setSuccessMessage}
+          open
+          violation={activeDialog.violation}
+        />
+      ) : null}
+      {activeDialog?.type === "markPaid" ? (
+        <MarkFinePaidModal
+          houseCode={houseCode}
+          onClose={() => setActiveDialog(null)}
+          onSuccess={setSuccessMessage}
+          open
+          violation={activeDialog.violation}
+        />
+      ) : null}
     </div>
   );
 }

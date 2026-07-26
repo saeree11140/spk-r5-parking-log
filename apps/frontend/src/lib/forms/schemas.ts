@@ -48,10 +48,12 @@ export const cancelViolationSchema = z.object({
   reason: z
     .string()
     .transform((value) => value.trim())
-    .pipe(z.string().min(5).max(500))
-    .refine((value) => value.length >= 5 && value.length <= 500, {
-      message: "เหตุผลต้องมี 5–500 ตัวอักษร",
-    }),
+    .pipe(
+      z
+        .string()
+        .min(5, "เหตุผลต้องมี 5–500 ตัวอักษร")
+        .max(500, "เหตุผลต้องมี 5–500 ตัวอักษร"),
+    ),
 });
 
 export function markFinePaidSchema(occurredAt: string, now: Date) {
@@ -70,7 +72,13 @@ export function markFinePaidSchema(occurredAt: string, now: Date) {
 export type CreateViolationFormValues = z.infer<
   ReturnType<typeof createViolationSchema>
 >;
+export type CreateViolationFormInput = z.input<
+  ReturnType<typeof createViolationSchema>
+>;
 export type CancelViolationFormValues = z.infer<typeof cancelViolationSchema>;
 export type MarkFinePaidFormValues = z.infer<
+  ReturnType<typeof markFinePaidSchema>
+>;
+export type MarkFinePaidFormInput = z.input<
   ReturnType<typeof markFinePaidSchema>
 >;

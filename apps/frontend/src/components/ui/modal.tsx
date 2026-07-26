@@ -49,7 +49,11 @@ export function Modal({
     if (!open) return;
 
     const panel = panelRef.current;
-    const returnFocusElement = returnFocusRef?.current;
+    const returnFocusElement =
+      returnFocusRef?.current ??
+      (document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null);
     const preferred = initialFocus
       ? panel?.querySelector<HTMLElement>(initialFocus)
       : null;
