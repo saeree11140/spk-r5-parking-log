@@ -545,6 +545,163 @@ tbody tr:hover {
   text-decoration: underline;
 }
 
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.breadcrumbs a {
+  color: var(--road-blue);
+  text-decoration: none;
+}
+
+.house-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.house-header h1,
+.house-header p {
+  margin: 0;
+}
+
+.house-header h1 {
+  color: var(--road-blue);
+  font: 700 clamp(32px, 4vw, 46px)/1 var(--font-system), sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.house-header p {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+.house-title-line,
+.header-actions,
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.house-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.house-summary-card {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.house-summary-card > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.house-summary-card .metric-value {
+  margin-top: 12px;
+  font-size: 28px;
+}
+
+.history-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.history-stack > h2 {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+
+.cycle-card {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgb(23 33 43 / 4%);
+}
+
+.cycle-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cycle-header h2,
+.cycle-header p {
+  margin: 0;
+}
+
+.cycle-header h2 {
+  font: 600 22px/1.2 var(--font-system), sans-serif;
+}
+
+.cycle-header p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cycle-totals {
+  display: flex;
+  gap: 32px;
+  padding: 14px 20px;
+  margin: 0;
+  background: #f9fafb;
+  border-bottom: 1px solid var(--border);
+}
+
+.cycle-totals div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.cycle-totals dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cycle-totals dd {
+  margin: 0;
+  font: 600 16px/1 var(--font-system), sans-serif;
+}
+
+.cancellation-reason,
+.payment-detail,
+.payment-detail small {
+  display: block;
+}
+
+.cancellation-reason,
+.payment-detail small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.row-actions {
+  flex-wrap: wrap;
+}
+
+.row-actions .button {
+  min-height: 34px;
+  padding: 5px 9px;
+  font-size: 13px;
+}
+
 @keyframes skeleton {
   to {
     background-position: -200% 0;
@@ -617,6 +774,18 @@ tbody tr:hover {
     flex-direction: column;
   }
 
+  .house-header {
+    align-items: flex-start;
+  }
+
+  .house-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cycle-totals {
+    overflow-x: auto;
+  }
+
   .select-field {
     min-width: 0;
   }
@@ -644,6 +813,16 @@ tbody tr:hover {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .house-header,
+  .header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .house-summary-grid {
     grid-template-columns: 1fr;
   }
 
