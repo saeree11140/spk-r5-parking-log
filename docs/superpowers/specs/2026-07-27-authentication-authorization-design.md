@@ -47,6 +47,91 @@
 - ADMIN จัดการผู้ใช้ผ่าน Frontend
 - ADMIN คนแรกสร้างด้วย Seed จาก Environment Variables
 
+## Flow Diagram
+
+### Login และบังคับเปลี่ยนรหัสผ่าน
+
+```mermaid
+flowchart TD
+    A[ผู้ใช้เปิดระบบ] --> B{มี Session ใช้งานได้?}
+    B -- ไม่มี --> C[หน้า Login]
+    C --> D[ส่ง username และ password]
+    D --> E{ข้อมูลถูกต้องและบัญชีไม่ถูกล็อก?}
+    E -- ไม่ถูกต้อง --> F[เพิ่ม failedLoginAttempts]
+    F --> G{ผิดครบ 5 ครั้ง?}
+    G -- ใช่ --> H[ล็อกบัญชี 15 นาที]
+    G -- ไม่ใช่ --> I[ตอบ generic login error]
+    H --> I
+    I --> C
+    E -- ถูกต้อง --> J[สร้าง AuthSession 8 ชั่วโมง]
+    J --> K[ตั้ง Access, Refresh และ CSRF Cookies]
+    B -- มี --> L[โหลด GET /api/auth/me]
+    K --> L
+    L --> M{mustChangePassword?}
+    M -- ใช่ --> N[หน้า Change Password]
+    N --> O[ตรวจ current password และ password policy]
+    O --> P[เปลี่ยน password และ revoke Session อื่น]
+    P --> Q[ออก token ชุดใหม่]
+    Q --> R[เปิด Dashboard]
+    M -- ไม่ใช่ --> R
+```
+
+### Protected Request และ Token Refresh
+
+```mermaid
+sequenceDiagram
+    participant UI as Frontend
+    participant API as Backend API
+    participant DB as PostgreSQL
+
+    UI->>API: Protected request + Access Cookie
+    API->>API: Verify JWT signature และ expiry
+    API->>DB: ตรวจ AuthSession และ User ปัจจุบัน
+    alt Access และ Session ใช้งานได้
+        DB-->>API: Active User + Role
+        API-->>UI: Success response
+    else Access หมดอายุหรือ Session ใช้ไม่ได้
+        API-->>UI: 401 AUTH_REQUIRED
+        UI->>API: POST /auth/refresh + Refresh/CSRF Cookies
+        API->>DB: ตรวจ Session, User และ Refresh hash
+        alt Refresh ใช้งานได้
+            API->>DB: Rotate Refresh hash แบบ transaction
+            API-->>UI: Access/Refresh Cookies ชุดใหม่
+            UI->>API: Retry request เดิม 1 ครั้ง
+            API-->>UI: Success response
+        else Refresh ใช้ไม่ได้หรือถูกใช้ซ้ำ
+            API->>DB: Revoke Session
+            API-->>UI: 401 และล้าง Cookies
+            UI->>UI: Clear auth state และเปิด Login
+        end
+    end
+```
+
+### Authorization และ User Management
+
+```mermaid
+flowchart TD
+    A[Protected Request] --> B[Authentication Guard]
+    B --> C{Session และ User active?}
+    C -- ไม่ --> D[401 AUTH_REQUIRED]
+    C -- ใช่ --> E{ต้องเปลี่ยน password?}
+    E -- ใช่ --> F{เป็น me, change-password, refresh หรือ logout?}
+    F -- ไม่ใช่ --> Q[403 AUTH_PASSWORD_CHANGE_REQUIRED]
+    F -- ใช่ --> R[ทำ Auth operation]
+    E -- ไม่ --> G[Role Guard]
+    G --> H{Route ต้อง ADMIN?}
+    H -- ไม่ --> I[ทำ Parking หรือ Read operation]
+    H -- ใช่และเป็น STAFF --> J[403 AUTH_FORBIDDEN]
+    H -- ใช่และเป็น ADMIN --> K[ทำ User mutation]
+    K --> L{ปิดหรือลด Role ADMIN คนสุดท้าย?}
+    L -- ใช่ --> M[409 USER_LAST_ADMIN]
+    L -- ไม่ --> N[บันทึก User และ revoke Session เมื่อจำเป็น]
+    I --> O[เขียน AuditLog ด้วย User actor]
+    N --> O
+    O --> P[ตอบ Success]
+    R --> P
+```
+
 ## สถาปัตยกรรม Token และ Session
 
 ### Access Token
