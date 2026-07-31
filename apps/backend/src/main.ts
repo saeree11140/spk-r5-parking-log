@@ -1,17 +1,20 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from './app.module';
+import { requireAuthEnvironment } from './auth/auth-environment';
 import { ApiExceptionFilter } from './common/api-exception.filter';
 
 async function bootstrap(): Promise<void> {
+  const authEnvironment = requireAuthEnvironment();
   const app = await NestFactory.create(AppModule);
   const port = Number(process.env.BACKEND_PORT) || 3001;
-  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
 
   app.setGlobalPrefix('api');
+  app.use(cookieParser());
   app.enableCors({
-    origin: [frontendUrl],
+    origin: [authEnvironment.frontendUrl],
     credentials: true,
   });
   app.useGlobalPipes(
