@@ -1,9 +1,22 @@
 import type {
+  AuthUser,
   CycleResponse,
   HouseDetail,
   HouseSummary,
   ViolationResponse,
 } from "@spk-r5-parking-log/shared-types";
+
+export function makeAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
+  return {
+    id: "00000000-0000-4000-8000-000000000001",
+    username: "admin",
+    displayName: "ผู้ดูแลระบบ",
+    role: "ADMIN",
+    isActive: true,
+    mustChangePassword: false,
+    ...overrides,
+  };
+}
 
 export function makeHouseSummary(
   overrides: Partial<HouseSummary> = {},
