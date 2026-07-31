@@ -1,4 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type {
   HouseDetail,
   HouseSummary,
@@ -7,6 +8,7 @@ import type {
 import { HouseCodeDto } from './house-code.dto';
 import { HousesService } from './houses.service';
 
+@SkipThrottle({ auth: true })
 @Controller('houses')
 export class HousesController {
   constructor(private readonly houses: HousesService) {}

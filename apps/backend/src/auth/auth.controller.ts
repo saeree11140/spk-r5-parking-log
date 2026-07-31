@@ -3,7 +3,7 @@ import type {
   LogoutResponse,
 } from '@spk-r5-parking-log/shared-types';
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
 import { AuthCookieService, REFRESH_COOKIE_NAME } from './auth-cookie.service';
@@ -15,6 +15,7 @@ import { Public } from './decorators/public.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 
+@SkipThrottle({ auth: true })
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -23,6 +24,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @SkipThrottle({ auth: false })
   @Throttle({
     auth: { limit: 10, ttl: 60_000, blockDuration: 60_000 },
   })
@@ -42,6 +44,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ auth: false })
   @Throttle({
     auth: { limit: 10, ttl: 60_000, blockDuration: 60_000 },
   })

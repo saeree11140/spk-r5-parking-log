@@ -6,6 +6,7 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -21,6 +22,7 @@ import {
 import { ViolationRouteDto } from './violation-route.dto';
 
 @Roles('ADMIN', 'STAFF')
+@SkipThrottle({ auth: true })
 @Controller('houses')
 export class ViolationsController {
   constructor(private readonly violations: ViolationsService) {}

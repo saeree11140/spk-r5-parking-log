@@ -6,6 +6,7 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import type { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -16,6 +17,7 @@ import { MarkFinePaidDto } from './mark-fine-paid.dto';
 import { PaymentsService, type MarkFinePaidResponse } from './payments.service';
 
 @Roles('ADMIN', 'STAFF')
+@SkipThrottle({ auth: true })
 @Controller('houses')
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
