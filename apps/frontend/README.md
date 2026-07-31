@@ -12,6 +12,10 @@
 - ปรับสถานะ Fine เป็นชำระแล้วแบบ Offline
 - แสดงวันที่เวลาไทย เขตเวลา Asia/Bangkok และปีพุทธศักราช
 - รองรับ Keyboard, Focus Management และ Reduced Motion
+- Login และบังคับเปลี่ยนรหัสผ่านครั้งแรก
+- Protected routes โดยไม่แสดงข้อมูลก่อนตรวจ Session
+- ADMIN User Management; STAFF ไม่มีเมนูและเปิด `/users` ไม่ได้
+- Access expiry ใช้ single-flight refresh แล้ว retry request เดิมหนึ่งครั้ง
 
 ระบบนี้ไม่รับชำระเงินจริง ไม่เชื่อม Payment Gateway และไม่มีช่องกรอกยอดเงิน
 
@@ -20,7 +24,7 @@
 - Next.js App Router และ TypeScript
 - TanStack Query และ Axios สำหรับ Server State/API
 - React Hook Form และ Zod สำหรับ Form/Validation
-- Zustand สำหรับ UI State ของ Dashboard
+- Zustand สำหรับ Auth/UI State โดยไม่เก็บ token
 - date-fns สำหรับวันที่เวลา
 - Lucide React สำหรับ Icon
 - Vitest และ Testing Library สำหรับ Test
@@ -54,6 +58,8 @@ pnpm dev:frontend
 
 เปิด `http://localhost:3000`
 
+ADMIN จาก Seed ต้องเปลี่ยนรหัสผ่านหลัง Login ครั้งแรก จากนั้นใช้งาน Dashboard และหน้า `/users` ได้ Session มีอายุสูงสุด 8 ชั่วโมง ส่วน Access Token มีอายุ 15 นาทีและ refresh ผ่าน HttpOnly cookie อัตโนมัติ
+
 หรือรัน Frontend แยก:
 
 ```bash
@@ -75,9 +81,14 @@ Build จะสร้าง Static HTML สำหรับ Dashboard และ�
 
 ```text
 /
+/login
+/change-password
+/users
 /houses/R5-001
 ...
 /houses/R5-164
 ```
 
 ผลลัพธ์อยู่ใน `apps/frontend/out` แต่ข้อมูลจริงยังโหลดจาก Backend API ตอนใช้งาน
+
+Root metadata กำหนด `noindex, nofollow, nocache` เพื่อลดการถูก index แต่ค่านี้ไม่ใช่ security boundary สิทธิ์จริงตรวจที่ Backend API

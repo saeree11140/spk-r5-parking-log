@@ -36,3 +36,23 @@
 - การกระทำผิดต้องรองรับการแนบรูปหลักฐาน
 - รูปหลักฐานจะไม่เก็บเป็น Binary ใน PostgreSQL
 - ไฟล์รูปจะเก็บใน Object Storage เช่น MinIO และเก็บเฉพาะ Object Key ใน Database
+
+## ผู้ใช้งานและสิทธิ์
+
+- ระบบมี Role `ADMIN` และ `STAFF`
+- ทั้งสอง Role ดูบ้าน เพิ่ม/ยกเลิก Violation และปรับ Fine เป็นชำระแล้วได้
+- เฉพาะ `ADMIN` ดูและจัดการผู้ใช้
+- ผู้ใช้ใหม่และผู้ใช้ที่ถูก Reset Password ต้องเปลี่ยนรหัสผ่านก่อนใช้งานส่วนอื่น
+- ห้าม `ADMIN` ปิดบัญชีตัวเอง
+- ห้ามปิดบัญชีหรือลด Role ของ `ADMIN` คนสุดท้าย
+- การปิดบัญชีหรือ Reset Password ต้องยกเลิก Session เดิมทั้งหมดของผู้ใช้นั้น
+
+## Session และ Security
+
+- Access Token อายุไม่เกิน 15 นาที
+- Refresh Session อายุสูงสุด 8 ชั่วโมง และหมุน Refresh Token ทุกครั้ง
+- Frontend ไม่เก็บ Password, Access Token, Refresh Token หรือ CSRF Token ใน Storage
+- Login ผิดครบ 5 ครั้งล็อกบัญชี 15 นาที โดยข้อความ error ไม่เปิดเผยว่า Username มีอยู่หรือไม่
+- Mutation ต้องผ่าน Origin และ CSRF validation
+- ทุก protected request ตรวจ Session และสถานะ User ปัจจุบันจาก Database
+- `noindex` เป็นคำแนะนำต่อ crawler เท่านั้น ไม่ใช่ access control

@@ -63,6 +63,18 @@ Backend อ่านตัวแปรจาก Process Environment หากไ
 BACKEND_PORT=3001 FRONTEND_URL=http://localhost:3000 pnpm dev:backend
 ```
 
+ก่อน Seed ครั้งแรก ต้องแทน placeholder ใน `.env`:
+
+```env
+JWT_ACCESS_SECRET=<random-secret-อย่างน้อย-32-bytes>
+AUTH_TOKEN_PEPPER=<random-secret-อีกชุด-อย่างน้อย-32-bytes>
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=<รหัสผ่านชั่วคราว-ตาม-policy>
+ADMIN_DISPLAY_NAME=ผู้ดูแลระบบ
+```
+
+Password ต้องยาว 12–128 ตัวอักษร มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก และตัวเลข ห้าม commit ค่าจริงลง Git
+
 ## Database Setup
 
 สร้าง Local Environment:
@@ -71,13 +83,21 @@ BACKEND_PORT=3001 FRONTEND_URL=http://localhost:3000 pnpm dev:backend
 cp .env.example .env
 ```
 
-เริ่ม PostgreSQL, Apply Migration และ Seed บ้าน 164 หลัง:
+เริ่ม PostgreSQL, Apply Migration และ Seed บ้าน 164 หลังพร้อม ADMIN คนแรก:
 
 ```bash
 pnpm db:up
 pnpm db:migrate
 pnpm db:seed
 pnpm db:status
+```
+
+Seed รันซ้ำได้ ไม่เขียนทับบ้านหรือ ADMIN เดิม Login ครั้งแรกบังคับเปลี่ยนรหัสผ่าน
+
+ลบ Auth Session ที่หมดอายุ:
+
+```bash
+pnpm --filter backend auth:sessions:cleanup
 ```
 
 หยุด PostgreSQL โดยเก็บข้อมูลใน Named Volume:
@@ -133,7 +153,20 @@ pnpm lint
 ## Service URLs
 
 - Frontend: http://localhost:3000
+- Backend API: http://localhost:3001/api
 - Backend Health Check: http://localhost:3001/api/health
+
+## Authentication และสิทธิ์
+
+ระบบใช้ Access Token อายุ 15 นาที และ Database-backed Refresh Session อายุสูงสุด 8 ชั่วโมงผ่าน HttpOnly cookies Frontend ไม่เก็บ token ใน Local Storage ผู้ใช้ใหม่และบัญชีที่ถูก Reset Password ต้องเปลี่ยนรหัสผ่านก่อนใช้งานส่วนอื่น
+
+| ความสามารถ                                       | ADMIN | STAFF |
+| ------------------------------------------------ | :---: | :---: |
+| ดูบ้านและประวัติ                                 |   ✓   |   ✓   |
+| เพิ่ม/ยกเลิก Violation และ Mark Fine ว่าชำระแล้ว |   ✓   |   ✓   |
+| ดู/สร้าง/แก้ไข/ปิดบัญชี/Reset Password ผู้ใช้    |   ✓   |   —   |
+
+ระบบห้าม ADMIN ปิดบัญชีตัวเอง และห้ามปิดหรือลดสิทธิ์ ADMIN คนสุดท้าย
 
 ## Core Parking API
 
@@ -153,7 +186,10 @@ Backend คำนวณลำดับและค่าปรับเอง: �
 
 ```bash
 curl -X POST http://localhost:3001/api/houses/R5-001/violations \
+  -b cookies.txt \
   -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
+  -H 'X-CSRF-Token: CSRF_COOKIE_VALUE' \
   -d '{"occurredAt":"2026-07-19T10:30:00+07:00","note":"จอดขวางทางเข้า"}'
 ```
 
@@ -161,7 +197,10 @@ curl -X POST http://localhost:3001/api/houses/R5-001/violations \
 
 ```bash
 curl -X POST http://localhost:3001/api/houses/R5-001/violations/VIOLATION_UUID/cancel \
+  -b cookies.txt \
   -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
+  -H 'X-CSRF-Token: CSRF_COOKIE_VALUE' \
   -d '{"reason":"บันทึกผิดหลัง"}'
 ```
 
@@ -169,7 +208,10 @@ curl -X POST http://localhost:3001/api/houses/R5-001/violations/VIOLATION_UUID/c
 
 ```bash
 curl -X POST http://localhost:3001/api/houses/R5-001/violations/VIOLATION_UUID/mark-paid \
+  -b cookies.txt \
   -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
+  -H 'X-CSRF-Token: CSRF_COOKIE_VALUE' \
   -d '{"paidAt":"2026-07-19T15:00:00+07:00","reference":"ใบเสร็จ-001"}'
 ```
 
@@ -182,6 +224,9 @@ Mark-paid เก็บสถานะการชำระ Offline เท่า�
 - React Hook Form + Zod, TanStack Query + Axios, Zustand และ date-fns
 - Lucide React Icons และ Vitest/Testing Library
 - Static HTML Routes สำหรับ Dashboard และบ้าน `R5-001` ถึง `R5-164`
+- Login, Forced Password Change, ADMIN/STAFF RBAC และ User Management
+- Access/Refresh Cookie Rotation, CSRF/Origin Validation และ Login Rate Limit
+- Metadata `noindex, nofollow, nocache` สำหรับ Admin UI
 - NestJS health endpoint
 - House Summary และ House Detail API
 - Create/Cancel Violation พร้อม Backend Resequence
@@ -194,10 +239,11 @@ Mark-paid เก็บสถานะการชำระ Offline เท่า�
 - NestJS DatabaseModule และ PrismaService
 - Seed บ้าน 164 หลังแบบ Idempotent
 
-ยังไม่มี Authentication, Authorization, Evidence Upload, Object Storage และ Online Payment
+`noindex` เป็นเพียงคำแนะนำต่อ crawler ไม่ใช่ access control ข้อมูลจริงป้องกันด้วย Backend Authentication/Authorization
+
+ยังไม่มี Evidence Upload, Object Storage และ Online Payment
 
 ## Future Development Steps
 
-1. Authentication และ Authorization
-2. Evidence Upload และ Object Storage
-3. Production Deployment และ Monitoring
+1. Evidence Upload และ Object Storage
+2. Production Deployment และ Monitoring
