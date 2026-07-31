@@ -20,6 +20,7 @@
 - ADMIN สร้าง แก้ไข ปิดใช้งาน และ Reset Password ผู้ใช้
 - Backend Guards สำหรับ Authentication, Role และ Must-change-password
 - Frontend Auth Gate, Login, Change Password และ User Management
+- ปิด Search Engine indexing สำหรับ Admin UI ด้วย `robots.txt` และ `noindex`
 - เชื่อมผู้ใช้จริงเข้ากับ Parking AuditLog
 - Seed ADMIN คนแรกจาก Environment Variables
 - Tests ระดับ Unit, Integration, E2E และ Browser
@@ -437,6 +438,14 @@ Create และ Reset Password ตั้ง `mustChangePassword=true` เสม
 
 ## Frontend Design
 
+### Search Indexing Hardening
+
+- สร้าง `app/robots.ts` ให้ทุก crawler ได้ `Disallow: /`
+- Root metadata ใช้ `robots: { index: false, follow: false, nocache: true }`
+- ไม่สร้าง `sitemap.xml` เพราะทุก route เป็น Admin UI
+- `robots.txt` และ `noindex` เป็น crawler guidance เท่านั้น ไม่ใช่ security boundary
+- Backend Authentication และ Authorization ยังเป็นตัวป้องกันข้อมูลจริง
+
 ### Routes
 
 - `/login`: Login form
@@ -555,6 +564,7 @@ FRONTEND_URL=http://localhost:3000
 ## Success Criteria
 
 - API ทุกตัวนอกจาก Public Surface ป้องกันด้วย Backend Authentication
+- Build สร้าง `/robots.txt` แบบ `Disallow: /` และทุกหน้าใช้ `noindex, nofollow`
 - Role enforcement อยู่ Backend และมี Frontend affordance ตรงกัน
 - Access Token และ Refresh Token ไม่เข้าถึงผ่าน JavaScript และไม่อยู่ localStorage/sessionStorage
 - Refresh Token ใน Database เป็น hash เท่านั้นและหมุนทุกครั้ง
