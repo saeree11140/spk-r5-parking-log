@@ -96,7 +96,9 @@ a {
   place-items: center;
   border: 3px solid currentColor;
   border-radius: 10px;
-  font: 700 24px/1 var(--font-system), sans-serif;
+  font:
+    700 24px/1 var(--font-system),
+    sans-serif;
 }
 
 .brand-copy {
@@ -105,7 +107,9 @@ a {
 }
 
 .brand-copy strong {
-  font: 600 18px/1.3 var(--font-system), sans-serif;
+  font:
+    600 18px/1.3 var(--font-system),
+    sans-serif;
 }
 
 .brand-copy small {
@@ -114,7 +118,9 @@ a {
 
 .app-shell--collapsed .brand-copy,
 .app-shell--collapsed .nav-link span,
-.app-shell--collapsed .sidebar-toggle span {
+.app-shell--collapsed .sidebar-toggle span,
+.app-shell--collapsed .sidebar-logout span,
+.app-shell--collapsed .sidebar-user-copy {
   display: none;
 }
 
@@ -144,7 +150,56 @@ a {
 
 .sidebar-toggle {
   width: 100%;
+  color: #cfdbef;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px;
   margin-top: auto;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+}
+
+.user-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  color: #102a56;
+  border-radius: 9px;
+  background: #fff;
+  font:
+    700 16px/1 var(--font-system),
+    sans-serif;
+}
+
+.sidebar-user-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.sidebar-user-copy strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-user-copy small {
+  color: #9fbee8;
+  font:
+    600 11px/1.4 var(--font-system),
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-logout,
+.sidebar-toggle {
+  width: 100%;
+  justify-content: flex-start;
   color: #cfdbef;
 }
 
@@ -380,7 +435,9 @@ a {
 
 .eyebrow {
   color: var(--road-blue);
-  font: 600 12px/1.4 var(--font-system), sans-serif;
+  font:
+    600 12px/1.4 var(--font-system),
+    sans-serif;
   letter-spacing: 0.08em;
 }
 
@@ -572,7 +629,9 @@ tbody tr:hover {
 
 .house-header h1 {
   color: var(--road-blue);
-  font: 700 clamp(32px, 4vw, 46px)/1 var(--font-system), sans-serif;
+  font:
+    700 clamp(32px, 4vw, 46px)/1 var(--font-system),
+    sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -645,7 +704,9 @@ tbody tr:hover {
 }
 
 .cycle-header h2 {
-  font: 600 22px/1.2 var(--font-system), sans-serif;
+  font:
+    600 22px/1.2 var(--font-system),
+    sans-serif;
 }
 
 .cycle-header p {
@@ -676,7 +737,9 @@ tbody tr:hover {
 
 .cycle-totals dd {
   margin: 0;
-  font: 600 16px/1 var(--font-system), sans-serif;
+  font:
+    600 16px/1 var(--font-system),
+    sans-serif;
 }
 
 .cancellation-reason,
@@ -778,7 +841,195 @@ tbody tr:hover {
 }
 
 .fine-summary strong {
-  font: 700 24px/1 var(--font-system), sans-serif;
+  font:
+    700 24px/1 var(--font-system),
+    sans-serif;
+}
+
+.auth-bootstrap {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: var(--muted);
+}
+
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(480px, 1.15fr) minmax(440px, 0.85fr);
+}
+
+.auth-intro {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(40px, 6vw, 84px);
+  overflow: hidden;
+  color: #fff;
+  background: #102a56;
+}
+
+.auth-intro::after {
+  position: absolute;
+  right: 12%;
+  bottom: -50px;
+  width: 12px;
+  height: 55%;
+  border-radius: 999px;
+  background: #f6c344;
+  box-shadow: 36px 0 0 rgb(255 255 255 / 14%);
+  content: "";
+  transform: rotate(24deg);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-brand > span:last-child {
+  display: grid;
+}
+
+.auth-brand strong {
+  font:
+    700 20px/1.2 var(--font-system),
+    sans-serif;
+}
+
+.auth-brand small {
+  color: #c9d7f2;
+}
+
+.auth-intro > div:last-child {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+}
+
+.auth-intro h1 {
+  max-width: 600px;
+  margin: 10px 0 18px;
+  font:
+    700 clamp(42px, 5vw, 72px)/1.05 var(--font-system),
+    sans-serif;
+}
+
+.auth-intro p:last-child {
+  max-width: 560px;
+  margin: 0;
+  color: #c9d7f2;
+  font-size: 18px;
+  line-height: 1.75;
+}
+
+.permit-mark {
+  position: absolute;
+  top: 24%;
+  right: 9%;
+  display: grid;
+  width: 160px;
+  height: 160px;
+  place-items: center;
+  border: 4px solid rgb(255 255 255 / 18%);
+  border-radius: 26px;
+  color: rgb(255 255 255 / 18%);
+  font:
+    700 68px/1 var(--font-system),
+    sans-serif;
+  transform: rotate(8deg);
+}
+
+.permit-mark span {
+  margin-top: -38px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.auth-panel {
+  display: grid;
+  min-height: 100vh;
+  padding: 48px;
+  place-items: center;
+  background: #edf2f7;
+}
+
+.auth-card,
+.password-card {
+  width: min(100%, 460px);
+  padding: 42px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgb(16 42 86 / 13%);
+}
+
+.auth-card-icon,
+.password-icon {
+  color: var(--road-blue);
+}
+
+.auth-card-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 24px;
+}
+
+.auth-card h2,
+.password-card h1 {
+  margin: 7px 0 8px;
+  font-family: var(--font-system), sans-serif;
+}
+
+.auth-card h2 {
+  font-size: 32px;
+}
+
+.auth-card-copy,
+.password-card > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.auth-form {
+  margin-top: 28px;
+}
+
+.auth-form .button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.password-page {
+  display: grid;
+  min-height: 100vh;
+  padding: 48px 24px;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgb(16 42 86 / 96%), rgb(23 92 211 / 88%)),
+    var(--road-blue);
+}
+
+.password-card {
+  width: min(100%, 540px);
+}
+
+.password-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 24px;
+  place-items: center;
+  border-radius: 13px;
+  background: #eaf2ff;
+}
+
+.password-card h1 {
+  font-size: 30px;
+  line-height: 1.25;
 }
 
 @keyframes skeleton {
@@ -801,6 +1052,30 @@ tbody tr:hover {
 }
 
 @media (max-width: 800px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-intro {
+    min-height: auto;
+    padding: 28px 24px 34px;
+  }
+
+  .auth-intro > div:last-child,
+  .permit-mark {
+    display: none;
+  }
+
+  .auth-panel {
+    min-height: calc(100vh - 104px);
+    padding: 24px;
+  }
+
+  .auth-card,
+  .password-card {
+    padding: 28px 24px;
+  }
+
   .app-shell,
   .app-shell--collapsed {
     padding-left: 0;
@@ -833,6 +1108,16 @@ tbody tr:hover {
   }
 
   .mobile-header nav a {
+    color: #fff;
+  }
+
+  .mobile-header nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-header .button {
     color: #fff;
   }
 

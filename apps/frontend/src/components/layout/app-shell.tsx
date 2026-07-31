@@ -1,11 +1,22 @@
 "use client";
 
-import { House, LayoutDashboard, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  House,
+  LayoutDashboard,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { authApi } from "@/lib/api/auth-api";
+import { queryKeys } from "@/lib/query/keys";
+import { useAuthStore } from "@/stores/auth-store";
 import { useDashboardStore } from "@/stores/dashboard-store";
 
 const navigation = [
@@ -15,8 +26,22 @@ const navigation = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const collapsed = useDashboardStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useDashboardStore((state) => state.toggleSidebar);
+  const user = useAuthStore((state) => state.user);
+  const setUnauthenticated = useAuthStore((state) => state.setUnauthenticated);
+  const logout = useMutation({
+    mutationFn: authApi.logout,
+    onSettled: () => {
+      setUnauthenticated();
+      queryClient.removeQueries({ queryKey: queryKeys.auth });
+      queryClient.removeQueries({ queryKey: queryKeys.users });
+      queryClient.removeQueries({ queryKey: queryKeys.houses });
+      router.replace("/login");
+    },
+  });
 
   return (
     <div className={`app-shell ${collapsed ? "app-shell--collapsed" : ""}`}>
@@ -46,7 +71,40 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          {user?.role === "ADMIN" ? (
+            <Link
+              aria-current={pathname.startsWith("/users") ? "page" : undefined}
+              className={
+                pathname.startsWith("/users")
+                  ? "nav-link nav-link--active"
+                  : "nav-link"
+              }
+              href="/users"
+            >
+              <Users aria-hidden="true" size={20} />
+              <span>ผู้ใช้งาน</span>
+            </Link>
+          ) : null}
         </nav>
+        <div className="sidebar-user">
+          <span className="user-avatar" aria-hidden="true">
+            {user?.displayName.slice(0, 1) ?? "?"}
+          </span>
+          <span className="sidebar-user-copy">
+            <strong>{user?.displayName}</strong>
+            <small>{user?.role}</small>
+          </span>
+        </div>
+        <Button
+          aria-label="ออกจากระบบ"
+          className="sidebar-logout"
+          disabled={logout.isPending}
+          icon={LogOut}
+          onClick={() => logout.mutate()}
+          variant="ghost"
+        >
+          <span>{logout.isPending ? "กำลังออก..." : "ออกจากระบบ"}</span>
+        </Button>
         <Button
           aria-label={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
           className="sidebar-toggle"
@@ -65,7 +123,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <strong>SPK R5 Parking Log</strong>
         </Link>
         <nav aria-label="เมนูมือถือ">
-          <Link href="/">ภาพรวมบ้าน</Link>
+          {user?.role === "ADMIN" ? <Link href="/users">ผู้ใช้งาน</Link> : null}
+          <Button
+            aria-label="ออกจากระบบ"
+            disabled={logout.isPending}
+            icon={LogOut}
+            onClick={() => logout.mutate()}
+            variant="ghost"
+          />
         </nav>
       </header>
       <main className="app-content">{children}</main>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Noto_Sans_Thai } from "next/font/google";
 
-import { AppShell } from "@/components/layout/app-shell";
+import { AuthGate } from "@/features/auth/auth-gate";
 import { ADMIN_ROBOTS_METADATA } from "@/lib/admin-metadata";
 
 import { Providers } from "./providers";
@@ -36,7 +36,7 @@ export default function RootLayout({
     >
       <body>
         <Providers>
-          <AppShell>{children}</AppShell>
+          <AuthGate>{children}</AuthGate>
         </Providers>
       </body>
     </html>
