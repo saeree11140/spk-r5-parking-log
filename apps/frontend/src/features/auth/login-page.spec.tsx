@@ -22,7 +22,7 @@ describe("LoginPage", () => {
     const user = userEvent.setup();
     vi.mocked(authApi.login).mockRejectedValue(
       new ApiError(
-        "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+        "Invalid username or password",
         "AUTH_INVALID_CREDENTIALS",
         401,
       ),

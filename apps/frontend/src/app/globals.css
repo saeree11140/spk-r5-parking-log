@@ -261,6 +261,16 @@ a {
   background: rgb(23 33 43 / 7%);
 }
 
+.sidebar .sidebar-logout,
+.sidebar .sidebar-toggle {
+  color: #cfdbef;
+}
+
+.sidebar .button--ghost:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

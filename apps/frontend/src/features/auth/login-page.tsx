@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api/api-error";
 import { authApi } from "@/lib/api/auth-api";
 import {
   loginSchema,
@@ -98,9 +99,12 @@ export function LoginPage() {
             </label>
             {mutation.isError ? (
               <p className="form-error" role="alert">
-                {mutation.error instanceof Error
-                  ? mutation.error.message
-                  : "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}
+                {mutation.error instanceof ApiError &&
+                mutation.error.code === "AUTH_INVALID_CREDENTIALS"
+                  ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
+                  : mutation.error instanceof Error
+                    ? mutation.error.message
+                    : "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}
               </p>
             ) : null}
             <Button

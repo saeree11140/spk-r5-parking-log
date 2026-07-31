@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient, setUnauthenticated],
   );
 
-  if (currentUser.isPending || status === "checking") {
+  if (status === "checking") {
     return (
       <div role="status" aria-live="polite">
         กำลังตรวจสอบสิทธิ์
