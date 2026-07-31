@@ -1,7 +1,4 @@
-import { ValidationPipe, type INestApplication } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
-import request, { type Response } from 'supertest';
-import type { App } from 'supertest/types';
+import type { Response } from 'supertest';
 
 import type {
   HouseDetail,
@@ -9,9 +6,8 @@ import type {
   ViolationResponse,
 } from '@spk-r5-parking-log/shared-types';
 
-import { AppModule } from '../src/app.module';
-import { ApiExceptionFilter } from '../src/common/api-exception.filter';
 import { PrismaService } from '../src/database/prisma.service';
+import { createAuthTestHarness, type LoggedInAgent } from './auth-test-helpers';
 
 interface MutationBody {
   violation: ViolationResponse;
@@ -50,32 +46,21 @@ function bodyAs<T>(response: Response): T {
 }
 
 describe('Core parking API (e2e)', () => {
-  let app: INestApplication<App>;
+  const harness = createAuthTestHarness();
   let prisma: PrismaService;
+  let auth: LoggedInAgent;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = moduleFixture.createNestApplication();
-    app.setGlobalPrefix('api');
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        transform: true,
-        forbidNonWhitelisted: true,
-      }),
-    );
-    app.useGlobalFilters(new ApiExceptionFilter());
-    await app.init();
-    prisma = app.get(PrismaService);
+    await harness.start();
+    prisma = harness.prisma;
+    auth = await harness.login(await harness.createUser('STAFF'));
   });
 
   beforeEach(async () => resetHouse());
 
   afterAll(async () => {
     await resetHouse();
-    await app.close();
+    await harness.stop();
   });
 
   async function resetHouse(): Promise<void> {
@@ -115,10 +100,16 @@ describe('Core parking API (e2e)', () => {
   }
 
   async function createViolation(index: number): Promise<Response> {
-    return request(app.getHttpServer())
-      .post(`/api/houses/${HOUSE_CODE}/violations`)
+    return mutation(`/api/houses/${HOUSE_CODE}/violations`)
       .send({ occurredAt: occurredAt[index], note: `violation ${index + 1}` })
       .expect(201);
+  }
+
+  function mutation(path: string) {
+    return auth.agent
+      .post(path)
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', auth.csrf);
   }
 
   async function createFive(): Promise<MutationBody[]> {
@@ -130,9 +121,7 @@ describe('Core parking API (e2e)', () => {
   }
 
   it('lists 164 houses and returns summary instead of full history', async () => {
-    const response = await request(app.getHttpServer())
-      .get('/api/houses')
-      .expect(200);
+    const response = await auth.agent.get('/api/houses').expect(200);
     const houses = bodyAs<HouseSummary[]>(response);
 
     expect(houses).toHaveLength(164);
@@ -151,7 +140,7 @@ describe('Core parking API (e2e)', () => {
       created.map(({ violation }) => violation.fine?.amountBaht ?? 0),
     ).toEqual([0, 0, 1000, 500, 500]);
 
-    const detailResponse = await request(app.getHttpServer())
+    const detailResponse = await auth.agent
       .get(`/api/houses/${HOUSE_CODE}`)
       .expect(200);
     const detail = bodyAs<HouseDetail>(detailResponse);
@@ -164,10 +153,9 @@ describe('Core parking API (e2e)', () => {
     const fined = created.slice(2);
 
     for (let index = 0; index < fined.length; index += 1) {
-      const response = await request(app.getHttpServer())
-        .post(
-          `/api/houses/${HOUSE_CODE}/violations/${fined[index]?.violation.id}/mark-paid`,
-        )
+      const response = await mutation(
+        `/api/houses/${HOUSE_CODE}/violations/${fined[index]?.violation.id}/mark-paid`,
+      )
         .send({
           paidAt: `2026-07-0${6 + index}T10:00:00+07:00`,
           reference: `receipt-${index + 1}`,
@@ -179,8 +167,7 @@ describe('Core parking API (e2e)', () => {
     }
 
     const next = bodyAs<MutationBody>(
-      await request(app.getHttpServer())
-        .post(`/api/houses/${HOUSE_CODE}/violations`)
+      await mutation(`/api/houses/${HOUSE_CODE}/violations`)
         .send({ occurredAt: '2026-07-09T10:00:00+07:00' })
         .expect(201),
     );
@@ -189,13 +176,11 @@ describe('Core parking API (e2e)', () => {
   });
 
   it('allows backdate and cancel before paid then recalculates fines', async () => {
-    await request(app.getHttpServer())
-      .post(`/api/houses/${HOUSE_CODE}/violations`)
+    await mutation(`/api/houses/${HOUSE_CODE}/violations`)
       .send({ occurredAt: occurredAt[1] })
       .expect(201);
     const backdated = bodyAs<MutationBody>(
-      await request(app.getHttpServer())
-        .post(`/api/houses/${HOUSE_CODE}/violations`)
+      await mutation(`/api/houses/${HOUSE_CODE}/violations`)
         .send({ occurredAt: occurredAt[0] })
         .expect(201),
     );
@@ -203,10 +188,9 @@ describe('Core parking API (e2e)', () => {
 
     const third = bodyAs<MutationBody>(await createViolation(2));
     const cancelled = bodyAs<MutationBody>(
-      await request(app.getHttpServer())
-        .post(
-          `/api/houses/${HOUSE_CODE}/violations/${backdated.violation.id}/cancel`,
-        )
+      await mutation(
+        `/api/houses/${HOUSE_CODE}/violations/${backdated.violation.id}/cancel`,
+      )
         .send({ reason: 'บันทึกผิดหลัง' })
         .expect(200),
     );
@@ -215,33 +199,30 @@ describe('Core parking API (e2e)', () => {
     expect(third.violation.fine?.amountBaht).toBe(1000);
 
     const detail = bodyAs<HouseDetail>(
-      await request(app.getHttpServer())
-        .get(`/api/houses/${HOUSE_CODE}`)
-        .expect(200),
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
     );
     expect(detail.cycles[0]?.pendingAmountBaht).toBe(0);
   });
 
   it('blocks cancel and backdate after paid without writing rollback audit', async () => {
     const created = await createFive();
-    await request(app.getHttpServer())
-      .post(
-        `/api/houses/${HOUSE_CODE}/violations/${created[2]?.violation.id}/mark-paid`,
-      )
+    await mutation(
+      `/api/houses/${HOUSE_CODE}/violations/${created[2]?.violation.id}/mark-paid`,
+    )
       .send({ paidAt: '2026-07-06T10:00:00+07:00' })
       .expect(200);
     const beforeAuditCount = await prisma.auditLog.count();
 
-    const cancelResponse = await request(app.getHttpServer())
-      .post(
-        `/api/houses/${HOUSE_CODE}/violations/${created[0]?.violation.id}/cancel`,
-      )
+    const cancelResponse = await mutation(
+      `/api/houses/${HOUSE_CODE}/violations/${created[0]?.violation.id}/cancel`,
+    )
       .send({ reason: 'บันทึกผิดหลัง' })
       .expect(409);
     expect(bodyAs<ErrorBody>(cancelResponse).code).toBe('PAID_CYCLE_IMMUTABLE');
 
-    const backdateResponse = await request(app.getHttpServer())
-      .post(`/api/houses/${HOUSE_CODE}/violations`)
+    const backdateResponse = await mutation(
+      `/api/houses/${HOUSE_CODE}/violations`,
+    )
       .send({ occurredAt: '2026-06-30T10:00:00+07:00' })
       .expect(409);
     expect(bodyAs<ErrorBody>(backdateResponse).code).toBe(
@@ -251,8 +232,7 @@ describe('Core parking API (e2e)', () => {
   });
 
   it('rejects invalid and unknown fields with stable validation envelope', async () => {
-    const response = await request(app.getHttpServer())
-      .post(`/api/houses/${HOUSE_CODE}/violations`)
+    const response = await mutation(`/api/houses/${HOUSE_CODE}/violations`)
       .send({ occurredAt: 'invalid', amountBaht: 1 })
       .expect(400);
     const body = bodyAs<ErrorBody>(response);
@@ -263,13 +243,11 @@ describe('Core parking API (e2e)', () => {
 
   it('serializes parallel creates without duplicate cycle or sequence', async () => {
     const responses = await Promise.all(
-      occurredAt
-        .slice(0, 4)
-        .map((timestamp) =>
-          request(app.getHttpServer())
-            .post(`/api/houses/${HOUSE_CODE}/violations`)
-            .send({ occurredAt: timestamp }),
-        ),
+      occurredAt.slice(0, 4).map((timestamp) =>
+        mutation(`/api/houses/${HOUSE_CODE}/violations`).send({
+          occurredAt: timestamp,
+        }),
+      ),
     );
     const statuses = responses.map(({ status }) => status);
     expect(statuses.every((status) => status === 201 || status === 409)).toBe(
