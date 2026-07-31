@@ -71,9 +71,8 @@ describe('AuthController', () => {
   it('revokes the session and clears cookies on logout', async () => {
     const { controller, authService, cookieService } = setup();
     const response = {} as Response;
-    const request = { user } as unknown as Request;
 
-    await expect(controller.logout(request, response)).resolves.toEqual({
+    await expect(controller.logout(user, response)).resolves.toEqual({
       success: true,
     });
     expect(authService.logout).toHaveBeenCalledWith(user);

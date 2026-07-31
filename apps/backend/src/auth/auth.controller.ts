@@ -3,11 +3,15 @@ import type {
   LogoutResponse,
 } from '@spk-r5-parking-log/shared-types';
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
 import { AuthCookieService, REFRESH_COOKIE_NAME } from './auth-cookie.service';
 import { AuthService } from './auth.service';
 import type { AuthenticatedUser, RequestMetadata } from './auth.types';
+import { AllowPasswordChange } from './decorators/allow-password-change.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { Public } from './decorators/public.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -18,6 +22,10 @@ export class AuthController {
     private readonly cookieService: AuthCookieService,
   ) {}
 
+  @Public()
+  @Throttle({
+    auth: { limit: 10, ttl: 60_000, blockDuration: 60_000 },
+  })
   @Post('login')
   async login(
     @Body() input: LoginDto,
@@ -33,6 +41,10 @@ export class AuthController {
     return { user: tokens.user };
   }
 
+  @Public()
+  @Throttle({
+    auth: { limit: 10, ttl: 60_000, blockDuration: 60_000 },
+  })
   @Post('refresh')
   async refresh(
     @Req() request: Request,
@@ -48,32 +60,32 @@ export class AuthController {
     return { user: tokens.user };
   }
 
+  @AllowPasswordChange()
   @Post('logout')
   async logout(
-    @Req() request: Request,
+    @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) response: Response,
   ): Promise<LogoutResponse> {
-    await this.authService.logout(this.currentUser(request));
+    await this.authService.logout(user);
     this.cookieService.clearAuthCookies(response);
 
     return { success: true };
   }
 
+  @AllowPasswordChange()
   @Get('me')
-  me(@Req() request: Request): AuthResponse {
-    return { user: this.authService.me(this.currentUser(request)) };
+  me(@CurrentUser() user: AuthenticatedUser): AuthResponse {
+    return { user: this.authService.me(user) };
   }
 
+  @AllowPasswordChange()
   @Post('change-password')
   async changePassword(
     @Body() input: ChangePasswordDto,
-    @Req() request: Request,
+    @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponse> {
-    const tokens = await this.authService.changePassword(
-      this.currentUser(request),
-      input,
-    );
+    const tokens = await this.authService.changePassword(user, input);
     this.cookieService.setAuthCookies(response, tokens);
 
     return { user: tokens.user };
@@ -84,10 +96,6 @@ export class AuthController {
       ipAddress: request.ip,
       userAgent: request.get('user-agent'),
     };
-  }
-
-  private currentUser(request: Request): AuthenticatedUser {
-    return (request as Request & { user: AuthenticatedUser }).user;
   }
 
   private cookie(request: Request, name: string): string {
