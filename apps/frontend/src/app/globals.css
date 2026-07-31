@@ -1032,6 +1032,14 @@ tbody tr:hover {
   line-height: 1.25;
 }
 
+.user-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 @keyframes skeleton {
   to {
     background-position: -200% 0;
