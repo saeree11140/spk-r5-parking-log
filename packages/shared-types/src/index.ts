@@ -2,6 +2,66 @@ export type ViolationStatus = "WARNING" | "PENDING_FINE" | "PAID" | "CANCELLED";
 
 export type FineStatus = "PENDING" | "PAID" | "CANCELLED";
 export type CycleStatus = "OPEN" | "CLOSED";
+export type UserRole = "ADMIN" | "STAFF";
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  isActive: boolean;
+  mustChangePassword: boolean;
+}
+
+export interface UserSummary extends AuthUser {
+  lockedUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoginInput {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: AuthUser;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface CreateUserInput {
+  username: string;
+  displayName: string;
+  role: UserRole;
+  temporaryPassword: string;
+}
+
+export interface UpdateUserInput {
+  displayName?: string;
+  role?: UserRole;
+  isActive?: boolean;
+}
+
+export interface ResetPasswordInput {
+  temporaryPassword: string;
+}
+
+export interface UsersResponse {
+  users: UserSummary[];
+}
+
+export interface UserResponse {
+  user: UserSummary;
+}
+
+export interface LogoutResponse {
+  success: true;
+}
 
 export interface FineResponse {
   id: string;

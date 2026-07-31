@@ -32,6 +32,13 @@ enum FineStatus {
   @@map("fine_status")
 }
 
+enum UserRole {
+  ADMIN
+  STAFF
+
+  @@map("user_role")
+}
+
 enum AuditAction {
   CREATE
   UPDATE
@@ -39,6 +46,14 @@ enum AuditAction {
   PAY
   RESEQUENCE
   CLOSE
+  LOGIN
+  LOGOUT
+  CHANGE_PASSWORD
+  CREATE_USER
+  UPDATE_USER
+  RESET_PASSWORD
+  ACTIVATE
+  DEACTIVATE
 
   @@map("audit_action")
 }
@@ -127,6 +142,43 @@ model Evidence {
 
   @@index([violationId])
   @@map("evidence")
+}
+
+model User {
+  id                  String        @id @default(uuid()) @db.Uuid
+  username            String        @unique @db.VarChar(64)
+  displayName         String        @map("display_name") @db.VarChar(255)
+  passwordHash        String        @map("password_hash") @db.VarChar(255)
+  role                UserRole
+  isActive            Boolean       @default(true) @map("is_active")
+  mustChangePassword  Boolean       @default(true) @map("must_change_password")
+  failedLoginAttempts Int           @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?     @map("locked_until") @db.Timestamptz(3)
+  passwordChangedAt   DateTime      @default(now()) @map("password_changed_at") @db.Timestamptz(3)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions            AuthSession[]
+
+  @@map("users")
+}
+
+model AuthSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @map("refresh_token_hash") @db.VarChar(255)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  lastUsedAt       DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  ipAddress        String?   @map("ip_address") @db.VarChar(64)
+  userAgent        String?   @map("user_agent") @db.VarChar(512)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@map("auth_sessions")
 }
 
 model AuditLog {
