@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setUnauthenticated = useAuthStore((state) => state.setUnauthenticated);
   const logout = useMutation({
     mutationFn: authApi.logout,
-    onSettled: () => {
+    onSuccess: () => {
       setUnauthenticated();
       queryClient.removeQueries({ queryKey: queryKeys.auth });
       queryClient.removeQueries({ queryKey: queryKeys.users });
@@ -105,6 +105,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           <span>{logout.isPending ? "กำลังออก..." : "ออกจากระบบ"}</span>
         </Button>
+        {logout.isError ? (
+          <p className="sidebar-error" role="alert">
+            ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง
+          </p>
+        ) : null}
         <Button
           aria-label={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
           className="sidebar-toggle"

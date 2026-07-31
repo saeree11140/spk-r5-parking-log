@@ -63,12 +63,14 @@ export function UserTable({
                       onClick={() => onEdit(user)}
                       variant="ghost"
                     />
-                    <Button
-                      aria-label={`Reset Password ${user.username}`}
-                      icon={KeyRound}
-                      onClick={() => onResetPassword(user)}
-                      variant="ghost"
-                    />
+                    {user.id !== currentUser.id ? (
+                      <Button
+                        aria-label={`Reset Password ${user.username}`}
+                        icon={KeyRound}
+                        onClick={() => onResetPassword(user)}
+                        variant="ghost"
+                      />
+                    ) : null}
                     {user.id !== currentUser.id ? (
                       <Button
                         aria-label={`${user.isActive ? "ปิด" : "เปิด"}บัญชี ${user.username}`}

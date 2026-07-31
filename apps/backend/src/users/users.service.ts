@@ -157,6 +157,14 @@ export class UsersService {
     userId: string,
     input: ResetPasswordDto,
   ): Promise<UserResponse> {
+    if (actor.id === userId) {
+      throw new DomainError(
+        409,
+        'USER_SELF_PASSWORD_RESET',
+        'Use change password to update your own password',
+      );
+    }
+
     this.requireValidPassword(input.temporaryPassword);
     const passwordHash = await this.passwordService.hash(
       input.temporaryPassword,

@@ -75,6 +75,10 @@ ADMIN_DISPLAY_NAME=ผู้ดูแลระบบ
 
 Password ต้องยาว 12–128 ตัวอักษร มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก และตัวเลข ห้าม commit ค่าจริงลง Git
 
+`TRUST_PROXY_HOPS` ต้องเป็นจำนวน reverse proxy ที่รู้แน่นอนระหว่าง `0–3`
+เท่านั้น ใช้ `0` เมื่อ Backend รับ request โดยตรง และ `1` เมื่ออยู่หลัง proxy
+หนึ่งชั้น ห้ามเชื่อถือ `X-Forwarded-For` แบบไม่จำกัด
+
 ## Database Setup
 
 สร้าง Local Environment:
@@ -150,6 +154,18 @@ pnpm --filter @spk-r5-parking-log/shared-types build
 pnpm lint
 ```
 
+## Test Commands
+
+```bash
+pnpm test
+pnpm --filter backend test:e2e --runInBand
+```
+
+E2E จะใช้ `E2E_DATABASE_URL` เมื่อกำหนดไว้ มิฉะนั้นจะสร้างชื่อจาก
+`DATABASE_URL` โดยเติม `_test` ให้อัตโนมัติ เช่น
+`spk_r5_parking_log_test` แล้ว migrate และ seed ก่อนทดสอบ ตัว test runner
+จะหยุดทันทีถ้าชื่อฐานข้อมูลไม่ได้ลงท้ายด้วย `_test`
+
 ## Service URLs
 
 - Frontend: http://localhost:3000
@@ -166,7 +182,8 @@ pnpm lint
 | เพิ่ม/ยกเลิก Violation และ Mark Fine ว่าชำระแล้ว |   ✓   |   ✓   |
 | ดู/สร้าง/แก้ไข/ปิดบัญชี/Reset Password ผู้ใช้    |   ✓   |   —   |
 
-ระบบห้าม ADMIN ปิดบัญชีตัวเอง และห้ามปิดหรือลดสิทธิ์ ADMIN คนสุดท้าย
+ระบบห้าม ADMIN ปิดบัญชีหรือ Reset Password ตัวเอง และห้ามปิดหรือลดสิทธิ์
+ADMIN คนสุดท้าย การเปลี่ยนรหัสผ่านตัวเองต้องใช้หน้า Change Password
 
 ## Core Parking API
 

@@ -4,12 +4,13 @@ import {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./api-error";
 import { apiClient, authRefreshClient } from "./client";
 
 const originalRefreshAdapter = authRefreshClient.defaults.adapter;
+const originalLocks = navigator.locks;
 
 function success(
   config: InternalAxiosRequestConfig,
@@ -35,6 +36,10 @@ function makeConfig(): InternalAxiosRequestConfig {
 describe("apiClient", () => {
   afterEach(() => {
     authRefreshClient.defaults.adapter = originalRefreshAdapter;
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: originalLocks,
+    });
     document.cookie =
       "spk_r5_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   });
@@ -188,5 +193,47 @@ describe("apiClient", () => {
     expect(refreshCount).toBe(1);
     expect(counts.get("/houses")).toBe(2);
     expect(counts.get("/auth/me")).toBe(2);
+  });
+
+  it("coordinates refresh rotation through a cross-tab Web Lock", async () => {
+    const request = vi.fn(
+      async (_name: string, callback: () => Promise<void>) => callback(),
+    );
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+    authRefreshClient.defaults.adapter = async (config) => success(config);
+    let attempts = 0;
+    const adapter = async (config: InternalAxiosRequestConfig) => {
+      attempts += 1;
+      if (attempts === 1) {
+        throw new AxiosError(
+          "Authentication required",
+          "ERR_BAD_REQUEST",
+          config,
+          undefined,
+          {
+            config,
+            data: {
+              statusCode: 401,
+              code: "AUTH_REQUIRED",
+              message: "Authentication required",
+            },
+            headers: {},
+            status: 401,
+            statusText: "Unauthorized",
+          },
+        );
+      }
+      return success(config);
+    };
+
+    await apiClient.get("/houses", { adapter });
+
+    expect(request).toHaveBeenCalledWith(
+      "spk-r5-auth-refresh",
+      expect.any(Function),
+    );
   });
 });

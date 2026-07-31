@@ -78,4 +78,18 @@ describe('AuthController', () => {
     expect(authService.logout).toHaveBeenCalledWith(user);
     expect(cookieService.clearAuthCookies).toHaveBeenCalledWith(response);
   });
+
+  it('clears stale cookies when refresh fails', async () => {
+    const { controller, authService, cookieService } = setup();
+    const error = new Error('invalid refresh');
+    authService.refresh.mockRejectedValue(error);
+    const request = {
+      cookies: { spk_r5_refresh: 'stale-refresh-token' },
+      get: jest.fn(),
+    } as unknown as Request;
+    const response = {} as Response;
+
+    await expect(controller.refresh(request, response)).rejects.toBe(error);
+    expect(cookieService.clearAuthCookies).toHaveBeenCalledWith(response);
+  });
 });

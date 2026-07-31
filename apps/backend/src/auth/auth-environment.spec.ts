@@ -15,6 +15,7 @@ describe('requireAuthEnvironment', () => {
       tokenPepper: 'p'.repeat(32),
       frontendUrl: 'http://localhost:3000',
       cookieSecure: false,
+      trustProxyHops: 0,
     });
   });
 
@@ -38,5 +39,26 @@ describe('requireAuthEnvironment', () => {
         NODE_ENV: 'production',
       }),
     ).toThrow('COOKIE_SECURE must be true in production');
+  });
+
+  it('accepts only an explicit bounded trusted proxy hop count', () => {
+    expect(
+      requireAuthEnvironment({
+        ...validEnvironment,
+        TRUST_PROXY_HOPS: '1',
+      }).trustProxyHops,
+    ).toBe(1);
+    expect(() =>
+      requireAuthEnvironment({
+        ...validEnvironment,
+        TRUST_PROXY_HOPS: 'all',
+      }),
+    ).toThrow('TRUST_PROXY_HOPS must be an integer between 0 and 3');
+    expect(() =>
+      requireAuthEnvironment({
+        ...validEnvironment,
+        TRUST_PROXY_HOPS: '4',
+      }),
+    ).toThrow('TRUST_PROXY_HOPS must be an integer between 0 and 3');
   });
 });

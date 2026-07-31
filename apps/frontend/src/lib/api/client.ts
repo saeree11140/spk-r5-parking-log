@@ -104,6 +104,19 @@ function shouldRefresh(error: unknown): error is AxiosError<ApiErrorResponse> {
   );
 }
 
+async function refreshAuthentication(): Promise<void> {
+  const refresh = async () => {
+    await authRefreshClient.post("/auth/refresh", {});
+  };
+
+  if (typeof navigator !== "undefined" && navigator.locks) {
+    await navigator.locks.request("spk-r5-auth-refresh", refresh);
+    return;
+  }
+
+  await refresh();
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
@@ -114,12 +127,9 @@ apiClient.interceptors.response.use(
     const config = error.config as RetriableRequestConfig;
     config._authRetried = true;
 
-    refreshPromise ??= authRefreshClient
-      .post("/auth/refresh", {})
-      .then(() => undefined)
-      .finally(() => {
-        refreshPromise = null;
-      });
+    refreshPromise ??= refreshAuthentication().finally(() => {
+      refreshPromise = null;
+    });
 
     try {
       await refreshPromise;

@@ -14,3 +14,23 @@ export function requireDatabaseUrl(
 
   return databaseUrl;
 }
+
+export function requireTestDatabaseUrl(
+  environment: NodeJS.ProcessEnv = process.env,
+): string {
+  const databaseUrl = requireDatabaseUrl(environment);
+  let databaseName: string;
+
+  try {
+    const parsed = new URL(databaseUrl);
+    databaseName = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+  } catch {
+    throw new Error('DATABASE_URL must be a valid PostgreSQL URL');
+  }
+
+  if (!databaseName.endsWith('_test')) {
+    throw new Error('E2E database name must end with _test');
+  }
+
+  return databaseUrl;
+}

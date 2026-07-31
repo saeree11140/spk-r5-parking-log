@@ -1,18 +1,28 @@
-import { screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { authApi } from "@/lib/api/auth-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { makeAuthUser } from "@/test/fixtures";
 import { renderWithQueryClient } from "@/test/render";
 
 import { AppShell } from "./app-shell";
 
+const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace }),
 }));
 
 describe("AppShell", () => {
+  afterEach(() => {
+    replace.mockReset();
+    vi.restoreAllMocks();
+    useAuthStore.getState().setChecking();
+  });
+
   it("shows identity and user management only to admins", () => {
     useAuthStore.setState({
       status: "authenticated",
@@ -41,5 +51,29 @@ describe("AppShell", () => {
     expect(
       screen.queryByRole("link", { name: "ผู้ใช้งาน" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps the authenticated state when logout fails", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(authApi, "logout").mockRejectedValue(new Error("network"));
+    useAuthStore.setState({
+      status: "authenticated",
+      user: makeAuthUser({ role: "ADMIN" }),
+    });
+
+    renderWithQueryClient(<AppShell>content</AppShell>);
+    await user.click(
+      within(screen.getByRole("complementary")).getByRole("button", {
+        name: "ออกจากระบบ",
+      }),
+    );
+
+    expect(
+      await screen.findByText("ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(useAuthStore.getState().status).toBe("authenticated"),
+    );
+    expect(replace).not.toHaveBeenCalled();
   });
 });

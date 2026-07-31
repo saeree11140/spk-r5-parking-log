@@ -10,6 +10,7 @@ import type { UserRole } from '@spk-r5-parking-log/shared-types';
 import { AppModule } from '../src/app.module';
 import { PasswordService } from '../src/auth/password.service';
 import { ApiExceptionFilter } from '../src/common/api-exception.filter';
+import { requireTestDatabaseUrl } from '../src/database/environment';
 import { PrismaService } from '../src/database/prisma.service';
 
 export interface TestUserCredentials {
@@ -42,6 +43,7 @@ class AuthTestHarness {
   private ipSequence = 10;
 
   async start(): Promise<void> {
+    requireTestDatabaseUrl();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

@@ -46,6 +46,7 @@ type PrismaMock = {
   user: {
     findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
     update: jest.Mock<(args: MutationArgs) => Promise<unknown>>;
+    updateMany: jest.Mock<(args: MutationArgs) => Promise<{ count: number }>>;
   };
   authSession: {
     findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
@@ -103,6 +104,9 @@ describe('AuthService', () => {
           calls.userUpdates.push(args);
           return Promise.resolve(userRecord);
         }),
+        updateMany: mockFunction<
+          (args: MutationArgs) => Promise<{ count: number }>
+        >().mockResolvedValue({ count: 1 }),
       },
       authSession: {
         findUnique: mockFunction<(args: unknown) => Promise<unknown>>(),
@@ -175,6 +179,24 @@ describe('AuthService', () => {
     expect(update?.where).toEqual({ id: userRecord.id });
     expect(update?.data.failedLoginAttempts).toBe(5);
     expect(update?.data.lockedUntil).toBeInstanceOf(Date);
+  });
+
+  it('rejects login when credentials changed before session creation', async () => {
+    const { service, prisma, passwordService } = setup();
+    prisma.user.findUnique.mockResolvedValue(userRecord);
+    prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    passwordService.verify.mockResolvedValue(true);
+
+    await expect(
+      service.login(
+        { username: 'admin', password: 'StrongPassword123' },
+        { ipAddress: '127.0.0.1' },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'AUTH_INVALID_CREDENTIALS',
+    });
+    expect(prisma.authSession.create).not.toHaveBeenCalled();
   });
 
   it('rotates refresh hash transactionally', async () => {

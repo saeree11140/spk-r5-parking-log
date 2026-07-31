@@ -61,13 +61,22 @@ export class AuthService {
     const authUser = this.toAuthUser(user);
 
     await runSerializable(this.prisma, async (tx) => {
-      await tx.user.update({
-        where: { id: user.id },
+      const credentialSnapshot = await tx.user.updateMany({
+        where: {
+          id: user.id,
+          passwordHash: user.passwordHash,
+          passwordChangedAt: user.passwordChangedAt,
+          isActive: true,
+          OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
+        },
         data: {
           failedLoginAttempts: 0,
           lockedUntil: null,
         },
       });
+      if (credentialSnapshot.count !== 1) {
+        throw this.invalidCredentials();
+      }
       await tx.authSession.create({
         data: {
           id: sessionId,

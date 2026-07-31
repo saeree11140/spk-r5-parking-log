@@ -56,7 +56,7 @@ describe("UsersPage", () => {
     expect(screen.getByText("รอเปลี่ยนรหัสผ่าน")).toBeInTheDocument();
   });
 
-  it("does not offer deactivate for current admin", async () => {
+  it("does not offer deactivate or password reset for current admin", async () => {
     const admin = {
       ...makeAuthUser(),
       createdAt: "2026-08-01T00:00:00.000Z",
@@ -72,6 +72,11 @@ describe("UsersPage", () => {
     expect(
       screen.queryByRole("button", {
         name: `ปิดบัญชี ${admin.username}`,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: `Reset Password ${admin.username}`,
       }),
     ).not.toBeInTheDocument();
   });

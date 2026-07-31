@@ -54,13 +54,18 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponse> {
     const refreshToken = this.cookie(request, REFRESH_COOKIE_NAME);
-    const tokens = await this.authService.refresh(
-      refreshToken,
-      this.requestMetadata(request),
-    );
-    this.cookieService.setAuthCookies(response, tokens);
+    try {
+      const tokens = await this.authService.refresh(
+        refreshToken,
+        this.requestMetadata(request),
+      );
+      this.cookieService.setAuthCookies(response, tokens);
 
-    return { user: tokens.user };
+      return { user: tokens.user };
+    } catch (error: unknown) {
+      this.cookieService.clearAuthCookies(response);
+      throw error;
+    }
   }
 
   @AllowPasswordChange()

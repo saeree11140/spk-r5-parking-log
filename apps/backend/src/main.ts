@@ -11,6 +11,13 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const port = Number(process.env.BACKEND_PORT) || 3001;
 
+  if (authEnvironment.trustProxyHops > 0) {
+    const httpInstance: unknown = app.getHttpAdapter().getInstance();
+    (httpInstance as { set(name: string, value: unknown): void }).set(
+      'trust proxy',
+      authEnvironment.trustProxyHops,
+    );
+  }
   app.setGlobalPrefix('api');
   app.use(cookieParser());
   app.enableCors({

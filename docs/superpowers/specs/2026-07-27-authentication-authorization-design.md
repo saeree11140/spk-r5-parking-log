@@ -229,20 +229,20 @@ STAFF
 
 ### User
 
-| Field | Type | กติกา |
-|---|---|---|
-| id | UUID | Primary key |
-| username | VarChar(64) | unique, lowercase, trim |
-| displayName | VarChar(255) | required |
-| passwordHash | VarChar(255) | Argon2id |
-| role | UserRole | ADMIN หรือ STAFF |
-| isActive | Boolean | default true |
-| mustChangePassword | Boolean | default true |
-| failedLoginAttempts | Int | default 0 |
-| lockedUntil | Timestamptz nullable | ล็อกชั่วคราว |
-| passwordChangedAt | Timestamptz | เวลาตั้งรหัสผ่านล่าสุด |
-| createdAt | Timestamptz | audit timestamp |
-| updatedAt | Timestamptz | audit timestamp |
+| Field               | Type                 | กติกา                   |
+| ------------------- | -------------------- | ----------------------- |
+| id                  | UUID                 | Primary key             |
+| username            | VarChar(64)          | unique, lowercase, trim |
+| displayName         | VarChar(255)         | required                |
+| passwordHash        | VarChar(255)         | Argon2id                |
+| role                | UserRole             | ADMIN หรือ STAFF        |
+| isActive            | Boolean              | default true            |
+| mustChangePassword  | Boolean              | default true            |
+| failedLoginAttempts | Int                  | default 0               |
+| lockedUntil         | Timestamptz nullable | ล็อกชั่วคราว            |
+| passwordChangedAt   | Timestamptz          | เวลาตั้งรหัสผ่านล่าสุด  |
+| createdAt           | Timestamptz          | audit timestamp         |
+| updatedAt           | Timestamptz          | audit timestamp         |
 
 Relations:
 
@@ -252,18 +252,18 @@ Relations:
 
 ### AuthSession
 
-| Field | Type | กติกา |
-|---|---|---|
-| id | UUID | Primary key |
-| userId | UUID | relation ไป User |
-| refreshTokenHash | VarChar(255) | hash + pepper |
-| expiresAt | Timestamptz | absolute expiry |
-| revokedAt | Timestamptz nullable | revoke marker |
-| lastUsedAt | Timestamptz | refresh/login activity |
-| ipAddress | VarChar(64) nullable | metadata แบบจำกัด |
-| userAgent | VarChar(512) nullable | truncate ก่อนเก็บ |
-| createdAt | Timestamptz | audit timestamp |
-| updatedAt | Timestamptz | audit timestamp |
+| Field            | Type                  | กติกา                  |
+| ---------------- | --------------------- | ---------------------- |
+| id               | UUID                  | Primary key            |
+| userId           | UUID                  | relation ไป User       |
+| refreshTokenHash | VarChar(255)          | hash + pepper          |
+| expiresAt        | Timestamptz           | absolute expiry        |
+| revokedAt        | Timestamptz nullable  | revoke marker          |
+| lastUsedAt       | Timestamptz           | refresh/login activity |
+| ipAddress        | VarChar(64) nullable  | metadata แบบจำกัด      |
+| userAgent        | VarChar(512) nullable | truncate ก่อนเก็บ      |
+| createdAt        | Timestamptz           | audit timestamp        |
+| updatedAt        | Timestamptz           | audit timestamp        |
 
 Indexes:
 
@@ -425,16 +425,16 @@ Create และ Reset Password ตั้ง `mustChangePassword=true` เสม
 
 ### Error Codes
 
-| HTTP | Code | ความหมาย |
-|---|---|---|
-| 401 | AUTH_INVALID_CREDENTIALS | Login ไม่สำเร็จ |
-| 401 | AUTH_REQUIRED | ไม่มีหรือ Session ใช้ไม่ได้ |
-| 403 | AUTH_FORBIDDEN | Role ไม่พอ |
-| 403 | AUTH_PASSWORD_CHANGE_REQUIRED | ต้องเปลี่ยนรหัสผ่าน |
-| 403 | CSRF_INVALID | CSRF/Origin ไม่ผ่าน |
-| 409 | USERNAME_TAKEN | Username ซ้ำ |
-| 409 | USER_LAST_ADMIN | ขัดกฎ ADMIN คนสุดท้าย |
-| 429 | AUTH_RATE_LIMITED | Request มากเกิน |
+| HTTP | Code                          | ความหมาย                    |
+| ---- | ----------------------------- | --------------------------- |
+| 401  | AUTH_INVALID_CREDENTIALS      | Login ไม่สำเร็จ             |
+| 401  | AUTH_REQUIRED                 | ไม่มีหรือ Session ใช้ไม่ได้ |
+| 403  | AUTH_FORBIDDEN                | Role ไม่พอ                  |
+| 403  | AUTH_PASSWORD_CHANGE_REQUIRED | ต้องเปลี่ยนรหัสผ่าน         |
+| 403  | CSRF_INVALID                  | CSRF/Origin ไม่ผ่าน         |
+| 409  | USERNAME_TAKEN                | Username ซ้ำ                |
+| 409  | USER_LAST_ADMIN               | ขัดกฎ ADMIN คนสุดท้าย       |
+| 429  | AUTH_RATE_LIMITED             | Request มากเกิน             |
 
 ใช้ API error envelope เดิมและไม่ส่ง stack trace
 
@@ -529,6 +529,10 @@ FRONTEND_URL=http://localhost:3000
 
 ### Backend E2E
 
+E2E ต้องรันบน PostgreSQL แยกที่ชื่อฐานข้อมูลลงท้าย `_test` เท่านั้น
+runner เตรียม migration และ seed ในฐานทดสอบก่อนเริ่ม และต้อง fail fast
+หากถูกสั่งให้ใช้ฐานข้อมูลปกติ
+
 - Protected API ตอบ 401 เมื่อไม่มี Session
 - Login ตั้ง Cookies และ `/auth/me` ใช้งานได้
 - Access หมดแล้ว Refresh ออก token ใหม่
@@ -537,8 +541,12 @@ FRONTEND_URL=http://localhost:3000
 - Password change revoke Session อื่น
 - STAFF ใช้ Parking mutations แต่ใช้ User API ไม่ได้
 - ADMIN จัดการผู้ใช้
+- ADMIN ใช้ Reset Password กับบัญชีตัวเองไม่ได้
 - CSRF invalid ถูกปฏิเสธ
 - Parking AuditLog บันทึก User actor
+
+Production ต้องกำหนด `TRUST_PROXY_HOPS` ตามจำนวน reverse proxy ที่รู้แน่นอน
+(`0–3`) เพื่อไม่เชื่อถือ `X-Forwarded-For` จาก client โดยตรง
 
 ### Frontend
 

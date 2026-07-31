@@ -153,6 +153,18 @@ describe('UsersService', () => {
     expect(sessionArgs?.data.revokedAt).toBeInstanceOf(Date);
   });
 
+  it('rejects resetting the current admin password', async () => {
+    const { service, tx, passwordService } = setup();
+
+    await expect(
+      service.resetPassword(admin, admin.id, {
+        temporaryPassword: 'StrongPassword123',
+      }),
+    ).rejects.toMatchObject({ code: 'USER_SELF_PASSWORD_RESET' });
+    expect(passwordService.hash).not.toHaveBeenCalled();
+    expect(tx.user.update).not.toHaveBeenCalled();
+  });
+
   it('maps duplicate usernames to USERNAME_TAKEN', async () => {
     const { service, tx } = setup();
     tx.user.create.mockRejectedValue({ code: 'P2002' });
