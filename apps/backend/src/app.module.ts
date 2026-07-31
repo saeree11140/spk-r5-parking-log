@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { HousesModule } from './houses/houses.module';
 import { PaymentsModule } from './payments/payments.module';
+import { UsersModule } from './users/users.module';
 import { ViolationsModule } from './violations/violations.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { ViolationsModule } from './violations/violations.module';
     ]),
     HealthModule,
     HousesModule,
+    UsersModule,
     ViolationsModule,
     PaymentsModule,
   ],
