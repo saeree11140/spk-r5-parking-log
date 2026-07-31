@@ -4,7 +4,7 @@ import type {
   ViolationResponse,
 } from '@spk-r5-parking-log/shared-types';
 
-import { writeAudit } from '../audit/audit-log';
+import { type AuditActor, writeAudit } from '../audit/audit-log';
 import { parsePastDateTime } from '../common/date-time';
 import { DomainError } from '../common/domain-error';
 import { runSerializable } from '../common/serializable-transaction';
@@ -27,6 +27,7 @@ export class ViolationsService {
   async create(
     houseCode: string,
     dto: CreateViolationDto,
+    actor: AuditActor,
   ): Promise<ViolationMutationResponse> {
     const occurredAt = parsePastDateTime(dto.occurredAt, new Date());
 
@@ -56,12 +57,20 @@ export class ViolationsService {
         },
       });
 
-      await resequenceCycle(tx, cycle.id);
-      await writeAudit(tx, 'ParkingViolation', violation.id, 'CREATE', null, {
-        cycleId: cycle.id,
-        occurredAt: occurredAt.toISOString(),
-        note: dto.note ?? null,
-      });
+      await resequenceCycle(tx, cycle.id, actor);
+      await writeAudit(
+        tx,
+        'ParkingViolation',
+        violation.id,
+        'CREATE',
+        null,
+        {
+          cycleId: cycle.id,
+          occurredAt: occurredAt.toISOString(),
+          note: dto.note ?? null,
+        },
+        actor,
+      );
 
       return this.loadMutationResponse(tx, violation.id, cycle.id);
     });
@@ -71,6 +80,7 @@ export class ViolationsService {
     houseCode: string,
     violationId: string,
     dto: CancelViolationDto,
+    actor: AuditActor,
   ): Promise<ViolationMutationResponse> {
     return runSerializable(this.prisma, async (tx) => {
       const violation = await tx.parkingViolation.findFirst({
@@ -136,10 +146,11 @@ export class ViolationsService {
             amountBaht: violation.fine.amountBaht,
           },
           { status: 'CANCELLED', amountBaht: 0 },
+          actor,
         );
       }
 
-      await resequenceCycle(tx, violation.cycleId);
+      await resequenceCycle(tx, violation.cycleId, actor);
       await writeAudit(
         tx,
         'ParkingViolation',
@@ -155,6 +166,7 @@ export class ViolationsService {
           cancelledAt: cancelledAt.toISOString(),
           cancellationReason: dto.reason,
         },
+        actor,
       );
 
       return this.loadMutationResponse(tx, violation.id, violation.cycleId);

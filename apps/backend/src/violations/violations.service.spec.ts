@@ -1,3 +1,4 @@
+import { SYSTEM_ACTOR } from '../audit/audit-log';
 import type { PrismaService } from '../database/prisma.service';
 import { DomainError } from '../common/domain-error';
 import { ViolationsService } from './violations.service';
@@ -17,7 +18,9 @@ describe('ViolationsService.create', () => {
     const tx = { house: { findUnique: jest.fn().mockResolvedValue(null) } };
     const service = new ViolationsService(prismaFor(tx));
 
-    await expect(service.create('R5-001', { occurredAt })).rejects.toEqual(
+    await expect(
+      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+    ).rejects.toEqual(
       new DomainError(404, 'HOUSE_NOT_FOUND', 'House not found'),
     );
   });
@@ -32,7 +35,9 @@ describe('ViolationsService.create', () => {
     };
     const service = new ViolationsService(prismaFor(tx));
 
-    await expect(service.create('R5-001', { occurredAt })).rejects.toEqual(
+    await expect(
+      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+    ).rejects.toEqual(
       new DomainError(409, 'HOUSE_INACTIVE', 'House is inactive'),
     );
   });
@@ -56,7 +61,9 @@ describe('ViolationsService.create', () => {
     };
     const service = new ViolationsService(prismaFor(tx));
 
-    await expect(service.create('R5-001', { occurredAt })).rejects.toEqual(
+    await expect(
+      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+    ).rejects.toEqual(
       new DomainError(
         409,
         'BACKDATE_NOT_ALLOWED',
@@ -84,7 +91,9 @@ describe('ViolationsService.create', () => {
     };
     const service = new ViolationsService(prismaFor(tx));
 
-    await expect(service.create('R5-001', { occurredAt })).rejects.toEqual(
+    await expect(
+      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+    ).rejects.toEqual(
       new DomainError(
         409,
         'BACKDATE_NOT_ALLOWED',
@@ -146,7 +155,7 @@ describe('ViolationsService.create', () => {
     };
     const service = new ViolationsService(prismaFor(tx));
 
-    const result = await service.create('R5-001', { occurredAt });
+    const result = await service.create('R5-001', { occurredAt }, SYSTEM_ACTOR);
 
     expect(createViolation).toHaveBeenCalledWith({
       data: {
@@ -189,9 +198,14 @@ describe('ViolationsService.cancel', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.cancel('R5-001', '00000000-0000-4000-8000-000000000003', {
-        reason: 'wrong house',
-      }),
+      service.cancel(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          reason: 'wrong house',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(404, 'VIOLATION_NOT_FOUND', 'Violation not found'),
     );
@@ -219,9 +233,14 @@ describe('ViolationsService.cancel', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.cancel('R5-001', '00000000-0000-4000-8000-000000000003', {
-        reason: 'wrong house',
-      }),
+      service.cancel(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          reason: 'wrong house',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(error);
   });
 
@@ -235,9 +254,14 @@ describe('ViolationsService.cancel', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.cancel('R5-001', '00000000-0000-4000-8000-000000000003', {
-        reason: 'wrong house',
-      }),
+      service.cancel(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          reason: 'wrong house',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(
         409,
@@ -294,6 +318,7 @@ describe('ViolationsService.cancel', () => {
       'R5-001',
       '00000000-0000-4000-8000-000000000003',
       { reason: 'wrong house' },
+      SYSTEM_ACTOR,
     );
 
     expect(update).toHaveBeenCalledWith({

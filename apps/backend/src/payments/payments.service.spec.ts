@@ -1,3 +1,4 @@
+import { SYSTEM_ACTOR } from '../audit/audit-log';
 import { DomainError } from '../common/domain-error';
 import type { PrismaService } from '../database/prisma.service';
 import { PaymentsService } from './payments.service';
@@ -44,9 +45,14 @@ describe('PaymentsService.markPaid', () => {
     const service = new PaymentsService(prismaFor(tx));
 
     await expect(
-      service.markPaid('R5-001', '00000000-0000-4000-8000-000000000003', {
-        paidAt: '2026-07-19T10:00:00+07:00',
-      }),
+      service.markPaid(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          paidAt: '2026-07-19T10:00:00+07:00',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(new DomainError(404, 'FINE_NOT_FOUND', 'Fine not found'));
   });
 
@@ -63,9 +69,14 @@ describe('PaymentsService.markPaid', () => {
       }),
     );
     await expect(
-      servicePaid.markPaid('R5-001', '00000000-0000-4000-8000-000000000003', {
-        paidAt: '2026-07-19T10:00:00+07:00',
-      }),
+      servicePaid.markPaid(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          paidAt: '2026-07-19T10:00:00+07:00',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(409, 'FINE_ALREADY_PAID', 'Fine is already paid'),
     );
@@ -82,9 +93,14 @@ describe('PaymentsService.markPaid', () => {
       }),
     );
     await expect(
-      serviceClosed.markPaid('R5-001', '00000000-0000-4000-8000-000000000003', {
-        paidAt: '2026-07-19T10:00:00+07:00',
-      }),
+      serviceClosed.markPaid(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          paidAt: '2026-07-19T10:00:00+07:00',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed'));
   });
 
@@ -99,16 +115,26 @@ describe('PaymentsService.markPaid', () => {
     );
 
     await expect(
-      service.markPaid('R5-001', '00000000-0000-4000-8000-000000000003', {
-        paidAt: '2026-07-19T05:00:00Z',
-      }),
+      service.markPaid(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          paidAt: '2026-07-19T05:00:00Z',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(400, 'FUTURE_TIMESTAMP', 'Timestamp cannot be in future'),
     );
     await expect(
-      service.markPaid('R5-001', '00000000-0000-4000-8000-000000000003', {
-        paidAt: '2026-07-19T01:00:00Z',
-      }),
+      service.markPaid(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000003',
+        {
+          paidAt: '2026-07-19T01:00:00Z',
+        },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(
         400,
@@ -146,10 +172,15 @@ describe('PaymentsService.markPaid', () => {
       };
       const service = new PaymentsService(prismaFor(tx));
 
-      const result = await service.markPaid('R5-001', source.id, {
-        paidAt: paidAt.toISOString(),
-        reference: 'receipt-001',
-      });
+      const result = await service.markPaid(
+        'R5-001',
+        source.id,
+        {
+          paidAt: paidAt.toISOString(),
+          reference: 'receipt-001',
+        },
+        SYSTEM_ACTOR,
+      );
 
       expect(result.cycleClosed).toBe(expectedClosed);
       expect(result.fine.status).toBe('PAID');

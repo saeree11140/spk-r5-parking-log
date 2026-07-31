@@ -1,4 +1,4 @@
-import { writeAudit } from '../audit/audit-log';
+import { type AuditActor, writeAudit } from '../audit/audit-log';
 import type { Prisma } from '../generated/prisma/client';
 import {
   buildSequencePlan,
@@ -8,6 +8,7 @@ import {
 export async function resequenceCycle(
   tx: Prisma.TransactionClient,
   cycleId: string,
+  actor: AuditActor,
 ): Promise<SequencePlanItem[]> {
   const violations = await tx.parkingViolation.findMany({
     where: { cycleId, status: { not: 'CANCELLED' } },
@@ -75,6 +76,7 @@ export async function resequenceCycle(
             }
           : null,
         { status: 'PENDING', amountBaht: item.fineAmountBaht },
+        actor,
       );
     }
 
@@ -92,6 +94,7 @@ export async function resequenceCycle(
           status: before.status,
         },
         { sequenceNumber: item.sequenceNumber, status },
+        actor,
       );
     }
   }

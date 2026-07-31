@@ -4,7 +4,7 @@ import type {
   ViolationResponse,
 } from '@spk-r5-parking-log/shared-types';
 
-import { writeAudit } from '../audit/audit-log';
+import { type AuditActor, writeAudit } from '../audit/audit-log';
 import { parsePastDateTime } from '../common/date-time';
 import { DomainError } from '../common/domain-error';
 import { runSerializable } from '../common/serializable-transaction';
@@ -26,6 +26,7 @@ export class PaymentsService {
     houseCode: string,
     violationId: string,
     dto: MarkFinePaidDto,
+    actor: AuditActor,
   ): Promise<MarkFinePaidResponse> {
     const paidAt = parsePastDateTime(dto.paidAt, new Date());
 
@@ -84,6 +85,7 @@ export class PaymentsService {
           paidAt: paidAt.toISOString(),
           reference: dto.reference ?? null,
         },
+        actor,
       );
       await writeAudit(
         tx,
@@ -92,6 +94,7 @@ export class PaymentsService {
         'PAY',
         { status: violation.status },
         { status: 'PAID' },
+        actor,
       );
 
       const pendingFineCount = await tx.fine.count({
@@ -115,6 +118,7 @@ export class PaymentsService {
           'CLOSE',
           { status: 'OPEN', closedAt: null },
           { status: 'CLOSED', closedAt: closedAt.toISOString() },
+          actor,
         );
         cycleClosed = true;
       }

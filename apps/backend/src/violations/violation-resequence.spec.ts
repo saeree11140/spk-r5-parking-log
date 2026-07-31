@@ -1,4 +1,5 @@
 import type { Prisma } from '../generated/prisma/client';
+import { SYSTEM_ACTOR } from '../audit/audit-log';
 import { resequenceCycle } from './violation-resequence';
 
 describe('resequenceCycle', () => {
@@ -33,7 +34,7 @@ describe('resequenceCycle', () => {
       auditLog: { create: auditCreate },
     } as unknown as Prisma.TransactionClient;
 
-    const result = await resequenceCycle(tx, 'cycle-1');
+    const result = await resequenceCycle(tx, 'cycle-1', SYSTEM_ACTOR);
 
     expect(result.map(({ fineAmountBaht }) => fineAmountBaht)).toEqual([
       0, 0, 1000, 500, 500,
@@ -89,7 +90,7 @@ describe('resequenceCycle', () => {
       auditLog: { create: jest.fn() },
     } as unknown as Prisma.TransactionClient;
 
-    await resequenceCycle(tx, 'cycle-1');
+    await resequenceCycle(tx, 'cycle-1', SYSTEM_ACTOR);
 
     expect(upsert).not.toHaveBeenCalled();
     expect(update).toHaveBeenCalledWith({
