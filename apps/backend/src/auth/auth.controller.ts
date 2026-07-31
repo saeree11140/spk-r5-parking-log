@@ -8,6 +8,7 @@ import type { Request, Response } from 'express';
 
 import { AuthCookieService, REFRESH_COOKIE_NAME } from './auth-cookie.service';
 import { AuthService } from './auth.service';
+import { DomainError } from '../common/domain-error';
 import type { AuthenticatedUser, RequestMetadata } from './auth.types';
 import { AllowPasswordChange } from './decorators/allow-password-change.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -63,7 +64,12 @@ export class AuthController {
 
       return { user: tokens.user };
     } catch (error: unknown) {
-      this.cookieService.clearAuthCookies(response);
+      if (
+        error instanceof DomainError &&
+        error.code === 'AUTH_INVALID_REFRESH'
+      ) {
+        this.cookieService.clearAuthCookies(response);
+      }
       throw error;
     }
   }

@@ -104,17 +104,24 @@ function shouldRefresh(error: unknown): error is AxiosError<ApiErrorResponse> {
   );
 }
 
-async function refreshAuthentication(): Promise<void> {
-  const refresh = async () => {
-    await authRefreshClient.post("/auth/refresh", {});
-  };
-
-  if (typeof navigator !== "undefined" && navigator.locks) {
-    await navigator.locks.request("spk-r5-auth-refresh", refresh);
-    return;
+export async function runWithAuthRefreshLock(
+  operation: () => Promise<void>,
+): Promise<void> {
+  if (typeof navigator === "undefined" || !navigator.locks) {
+    throw new ApiError(
+      "เบราว์เซอร์นี้ไม่รองรับการต่ออายุ Session อย่างปลอดภัย",
+      "AUTH_REFRESH_COORDINATION_UNAVAILABLE",
+      null,
+    );
   }
 
-  await refresh();
+  await navigator.locks.request("spk-r5-auth-refresh", operation);
+}
+
+async function refreshAuthentication(): Promise<void> {
+  await runWithAuthRefreshLock(async () => {
+    await authRefreshClient.post("/auth/refresh", {});
+  });
 }
 
 apiClient.interceptors.response.use(

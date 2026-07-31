@@ -554,6 +554,8 @@ Production ต้องกำหนด `TRUST_PROXY_HOPS` ตามจำนว�
 - Auth bootstrap และ redirect
 - Forced password change
 - Axios single-flight refresh และ retry ครั้งเดียว
+- Refresh ข้ามแท็บต้องใช้ Web Locks API; browser ที่ไม่รองรับต้อง fail safe
+  และกลับไป Login โดยห้าม rotate token แบบไม่มี coordination
 - Logout clear state
 - Role-based navigation
 - User list และ ADMIN mutations

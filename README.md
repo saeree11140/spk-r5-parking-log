@@ -24,6 +24,7 @@ Monorepo สำหรับระบบบันทึกและติดต�
 - pnpm
 - Git
 - Docker Desktop หรือ OrbStack
+- Desktop Browser ที่รองรับ Web Locks API (ใช้ประสาน Refresh Token ข้ามแท็บ)
 
 ## Project Structure
 

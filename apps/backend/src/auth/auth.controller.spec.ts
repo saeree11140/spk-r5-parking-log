@@ -4,6 +4,7 @@ import type { AuthCookieService } from './auth-cookie.service';
 import { AuthController } from './auth.controller';
 import type { AuthService } from './auth.service';
 import type { AuthenticatedUser, AuthTokens } from './auth.types';
+import { DomainError } from '../common/domain-error';
 
 const user: AuthenticatedUser = {
   id: '00000000-0000-4000-8000-000000000002',
@@ -81,7 +82,11 @@ describe('AuthController', () => {
 
   it('clears stale cookies when refresh fails', async () => {
     const { controller, authService, cookieService } = setup();
-    const error = new Error('invalid refresh');
+    const error = new DomainError(
+      401,
+      'AUTH_INVALID_REFRESH',
+      'invalid refresh',
+    );
     authService.refresh.mockRejectedValue(error);
     const request = {
       cookies: { spk_r5_refresh: 'stale-refresh-token' },
@@ -91,5 +96,19 @@ describe('AuthController', () => {
 
     await expect(controller.refresh(request, response)).rejects.toBe(error);
     expect(cookieService.clearAuthCookies).toHaveBeenCalledWith(response);
+  });
+
+  it('keeps cookies when refresh fails for a transient server error', async () => {
+    const { controller, authService, cookieService } = setup();
+    const error = new Error('database unavailable');
+    authService.refresh.mockRejectedValue(error);
+    const request = {
+      cookies: { spk_r5_refresh: 'current-refresh-token' },
+      get: jest.fn(),
+    } as unknown as Request;
+    const response = {} as Response;
+
+    await expect(controller.refresh(request, response)).rejects.toBe(error);
+    expect(cookieService.clearAuthCookies).not.toHaveBeenCalled();
   });
 });

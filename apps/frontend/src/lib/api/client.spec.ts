@@ -7,7 +7,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./api-error";
-import { apiClient, authRefreshClient } from "./client";
+import { apiClient, authRefreshClient, runWithAuthRefreshLock } from "./client";
 
 const originalRefreshAdapter = authRefreshClient.defaults.adapter;
 const originalLocks = navigator.locks;
@@ -153,6 +153,13 @@ describe("apiClient", () => {
 
   it("uses one refresh for concurrent 401s and retries each request once", async () => {
     document.cookie = "spk_r5_csrf=csrf-token; path=/";
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: {
+        request: async (_name: string, callback: () => Promise<void>) =>
+          callback(),
+      },
+    });
     let refreshCount = 0;
     const counts = new Map<string, number>();
     authRefreshClient.defaults.adapter = async (config) => {
@@ -235,5 +242,62 @@ describe("apiClient", () => {
       "spk-r5-auth-refresh",
       expect.any(Function),
     );
+  });
+
+  it("serializes two independent refresh contexts with the same lock", async () => {
+    let tail = Promise.resolve();
+    const request = vi.fn(
+      <T>(_name: string, callback: () => Promise<T>): Promise<T> => {
+        const result = tail.then(callback);
+        tail = result.then(
+          () => undefined,
+          () => undefined,
+        );
+        return result;
+      },
+    );
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+    let active = 0;
+    let maximumActive = 0;
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const operation = async (wait: boolean) => {
+      active += 1;
+      maximumActive = Math.max(maximumActive, active);
+      if (wait) await firstGate;
+      active -= 1;
+    };
+
+    const first = runWithAuthRefreshLock(() => operation(true));
+    await vi.waitFor(() => expect(active).toBe(1));
+    const second = runWithAuthRefreshLock(() => operation(false));
+    await Promise.resolve();
+
+    expect(active).toBe(1);
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(maximumActive).toBe(1);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(
+      request.mock.calls.every(([name]) => name === "spk-r5-auth-refresh"),
+    ).toBe(true);
+  });
+
+  it("fails safe instead of refreshing without cross-tab coordination", async () => {
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: undefined,
+    });
+    const refresh = vi.fn(async () => undefined);
+
+    await expect(runWithAuthRefreshLock(refresh)).rejects.toMatchObject({
+      code: "AUTH_REFRESH_COORDINATION_UNAVAILABLE",
+    });
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
