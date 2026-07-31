@@ -198,6 +198,8 @@ Database เก็บเฉพาะ hash ของ `secret` โดยใช้ 
 
 Frontend และ Backend สื่อสารด้วย Cookies ผ่าน Axios `withCredentials: true`
 
+Production ต้องให้ Frontend และ Backend อยู่ hostname เดียวกัน โดย Backend ใช้ path `/api` เพื่อให้ Frontend อ่าน CSRF cookie ได้โดยไม่ขยาย Cookie Domain ข้าม subdomain ส่วน Development ใช้ `localhost` คนละ port ได้เพราะ Cookie ไม่แยกตาม port
+
 มาตรการ CSRF:
 
 - Backend ตรวจ `Origin` ให้ตรงกับ `FRONTEND_URL` สำหรับ state-changing requests
