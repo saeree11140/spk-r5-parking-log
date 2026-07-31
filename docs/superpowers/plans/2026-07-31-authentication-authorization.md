@@ -25,7 +25,7 @@
 - ห้ามเก็บ password/hash/token/CSRF ใน API response, frontend storage, AuditLog หรือ logs
 - ทุก protected request ตรวจ Session และ User จาก DB; ห้ามเชื่อ role/status จาก JWT อย่างเดียว
 - Frontend คง `output: "export"` และ routes บ้าน 164 หลัง
-- Admin UI ใช้ `robots.txt` Disallow `/` และ metadata `noindex, nofollow, nocache`; robots ไม่ใช่ security boundary
+- Admin UI ใช้ metadata `noindex, nofollow, nocache`
 - ไม่มี `sitemap.xml`
 - Existing uncommitted root `package.json` และ `package-lock.json` เป็น user-owned; ห้ามแก้ ห้าม stage ห้าม commit
 - ใช้ `pnpm` เท่านั้น; ห้ามใช้ `npm install`
@@ -37,39 +37,24 @@
 - NestJS Authorization/RBAC: `https://docs.nestjs.com/security/authorization`
 - NestJS Rate Limiting: `https://docs.nestjs.com/security/rate-limiting`
 - node-argon2: `https://github.com/ranisalt/node-argon2`
-- Next.js robots metadata: `https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots`
+- Next.js metadata: `https://nextjs.org/docs/app/getting-started/metadata-and-og-images`
 
 ---
 
-### Task 1: Search Indexing Hardening
+### Task 1: Noindex Metadata Hardening
 
 **Files:**
-- Create: `apps/frontend/src/app/robots.ts`
-- Create: `apps/frontend/src/app/robots.spec.ts`
 - Create: `apps/frontend/src/lib/admin-metadata.ts`
 - Create: `apps/frontend/src/lib/admin-metadata.spec.ts`
 - Modify: `apps/frontend/src/app/layout.tsx`
 
 **Interfaces:**
-- Produces: `robots(): MetadataRoute.Robots`
 - Produces: `ADMIN_ROBOTS_METADATA: NonNullable<Metadata["robots"]>`
 - Consumed by: Root layout metadata and static export verification
 
 - [ ] **Step 1: Write failing metadata tests**
 
 ```ts
-// apps/frontend/src/app/robots.spec.ts
-import { describe, expect, it } from "vitest";
-import robots from "./robots";
-
-describe("robots", () => {
-  it("disallows every crawler from the admin UI", () => {
-    expect(robots()).toEqual({
-      rules: { userAgent: "*", disallow: "/" },
-    });
-  });
-});
-
 // apps/frontend/src/lib/admin-metadata.spec.ts
 import { describe, expect, it } from "vitest";
 import { ADMIN_ROBOTS_METADATA } from "./admin-metadata";
@@ -90,21 +75,14 @@ describe("ADMIN_ROBOTS_METADATA", () => {
 Run:
 
 ```bash
-pnpm --filter frontend test:run -- src/app/robots.spec.ts src/lib/admin-metadata.spec.ts
+pnpm --filter frontend test:run -- src/lib/admin-metadata.spec.ts
 ```
 
-Expected: FAIL because `./robots` and `./admin-metadata` do not exist.
+Expected: FAIL because `./admin-metadata` does not exist.
 
 - [ ] **Step 3: Implement metadata**
 
 ```ts
-// apps/frontend/src/app/robots.ts
-import type { MetadataRoute } from "next";
-
-export default function robots(): MetadataRoute.Robots {
-  return { rules: { userAgent: "*", disallow: "/" } };
-}
-
 // apps/frontend/src/lib/admin-metadata.ts
 import type { Metadata } from "next";
 
@@ -132,20 +110,19 @@ export const metadata: Metadata = {
 Run:
 
 ```bash
-pnpm --filter frontend test:run -- src/app/robots.spec.ts src/lib/admin-metadata.spec.ts
+pnpm --filter frontend test:run -- src/lib/admin-metadata.spec.ts
 pnpm --filter frontend build
-test "$(cat apps/frontend/out/robots.txt)" = $'User-Agent: *\nDisallow: /'
 rg -n 'name="robots" content="noindex, nofollow, nocache"' apps/frontend/out/index.html
 test ! -e apps/frontend/out/sitemap.xml
 ```
 
-Expected: tests PASS, build PASS, robots/noindex assertions PASS, no sitemap.
+Expected: tests PASS, build PASS, noindex assertion PASS, no sitemap.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/frontend/src/app/robots.ts apps/frontend/src/app/robots.spec.ts apps/frontend/src/lib/admin-metadata.ts apps/frontend/src/lib/admin-metadata.spec.ts apps/frontend/src/app/layout.tsx
-git commit -m "feat: block indexing of admin interface"
+git add apps/frontend/src/lib/admin-metadata.ts apps/frontend/src/lib/admin-metadata.spec.ts apps/frontend/src/app/layout.tsx
+git commit -m "feat: mark admin interface noindex"
 ```
 
 ---
@@ -1580,7 +1557,7 @@ pnpm --filter frontend lint
 pnpm --filter frontend build
 ```
 
-Expected: frontend suites PASS and static build includes `/users`, `/login`, `/change-password`, `/robots.txt` and 164 house routes.
+Expected: frontend suites PASS and static build includes `/users`, `/login`, `/change-password` and 164 house routes.
 
 - [ ] **Step 6: Commit**
 
@@ -1625,7 +1602,7 @@ Document:
 - Access 15 minutes, Session/Refresh 8 hours
 - `pnpm --filter backend auth:sessions:cleanup`
 - No online payment
-- robots/noindex are crawler hints, not access control
+- noindex เป็น crawler hint ไม่ใช่ access control
 
 - [ ] **Step 2: Run full automated verification**
 
@@ -1640,11 +1617,10 @@ pnpm --recursive lint
 pnpm --recursive build
 git diff --check
 test "$(find apps/frontend/out/houses -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')" = "164"
-test "$(cat apps/frontend/out/robots.txt)" = $'User-Agent: *\nDisallow: /'
 rg -n 'name="robots" content="noindex, nofollow, nocache"' apps/frontend/out/index.html
 ```
 
-Expected: all commands PASS, 164 house directories, correct robots/noindex.
+Expected: all commands PASS, 164 house directories and correct noindex.
 
 - [ ] **Step 3: Browser acceptance with real PostgreSQL**
 
