@@ -194,6 +194,7 @@ Routes:
 GET  /api/houses
 GET  /api/houses/:houseCode
 POST /api/houses/:houseCode/violations
+PATCH /api/houses/:houseCode/violations/:violationId
 POST /api/houses/:houseCode/violations/:violationId/cancel
 POST /api/houses/:houseCode/violations/:violationId/mark-paid
 ```
@@ -210,6 +211,26 @@ curl -X POST http://localhost:3001/api/houses/R5-001/violations \
   -H 'X-CSRF-Token: CSRF_COOKIE_VALUE' \
   -d '{"occurredAt":"2026-07-19T10:30:00+07:00","note":"จอดขวางทางเข้า"}'
 ```
+
+แก้ไข Violation:
+
+```bash
+curl -X PATCH http://localhost:3001/api/houses/R5-001/violations/VIOLATION_UUID \
+  -b cookies.txt \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
+  -H 'X-CSRF-Token: CSRF_COOKIE_VALUE' \
+  -d '{"occurredAt":"2026-07-19T10:30:00+07:00","note":"แก้ไขรายละเอียด"}'
+```
+
+`PATCH` แก้ไขได้เฉพาะวันเวลาเกิดเหตุ (`occurredAt`) และหมายเหตุ (`note`) โดย
+วันเวลาต้องไม่อยู่ในอนาคต และหมายเหตุยาวได้ไม่เกิน 1,000 ตัวอักษร ส่ง `null`
+หรือข้อความว่างเพื่อล้างหมายเหตุได้ การแก้ไขทำได้เมื่อ Violation ยังไม่ถูกยกเลิก
+และอยู่ใน Cycle ที่เปิดอยู่ซึ่งยังไม่มี Fine สถานะ `PAID` เท่านั้น
+
+หลังแก้ไข Backend จะเรียง Violation ใหม่ตามวันเวลาเกิดเหตุ แล้วคำนวณลำดับ สถานะ
+และ Fine ของทั้ง Cycle ใหม่อัตโนมัติ ดังนั้นการเลื่อนวันเวลาอาจทำให้ลำดับหรือค่าปรับ
+ของรายการอื่นใน Cycle เปลี่ยนไปได้
 
 ยกเลิก Violation ก่อนมี Fine ชำระแล้ว:
 
@@ -247,7 +268,7 @@ Mark-paid เก็บสถานะการชำระ Offline เท่า�
 - Metadata `noindex, nofollow, nocache` สำหรับ Admin UI
 - NestJS health endpoint
 - House Summary และ House Detail API
-- Create/Cancel Violation พร้อม Backend Resequence
+- Create/Edit/Cancel Violation พร้อม Backend Resequence และ Recalculate Fine
 - Fine แยกราย Violation และ Offline Paid Status
 - Serializable Transaction, Concurrency Retry และ Audit Log
 - Shared TypeScript types และ Type Declaration Output
