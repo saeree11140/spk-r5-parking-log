@@ -15,7 +15,6 @@
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.4.3",
-    "@internationalized/date": "^3.12.3",
     "@spk-r5-parking-log/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.18.1",
@@ -23,7 +22,6 @@
     "lucide-react": "^1.26.0",
     "next": "16.2.10",
     "react": "19.2.4",
-    "react-aria-components": "^1.20.0",
     "react-day-picker": "^10.0.1",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.83.0",

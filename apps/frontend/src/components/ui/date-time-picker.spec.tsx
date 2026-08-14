@@ -37,6 +37,14 @@ function PickerHarness({
 }
 
 describe("DateTimePickerField", () => {
+  it("does not inject a hidden native datetime-local input", () => {
+    renderWithQueryClient(<PickerHarness />);
+
+    expect(
+      document.querySelector('input[type="datetime-local"]'),
+    ).not.toBeInTheDocument();
+  });
+
   it("displays a normalized value using day month Buddhist year and 24-hour time", () => {
     renderWithQueryClient(<PickerHarness />);
 
@@ -111,6 +119,53 @@ describe("DateTimePickerField", () => {
     expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
       "14/08/2569 18:45",
     );
+  });
+
+  it("commits a calendar date only after Apply and closes the popover", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /15 สิงหาคม 2569/ }),
+    );
+
+    expect(onChange).not.toHaveBeenLastCalledWith("2026-08-15T17:30");
+    await user.click(screen.getByRole("button", { name: "นำไปใช้" }));
+
+    expect(onChange).toHaveBeenLastCalledWith("2026-08-15T17:30");
+    expect(
+      screen.queryByRole("dialog", { name: "เลือกวันเวลา" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("discards a draft on outside interaction and restores input focus", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <>
+        <PickerHarness />
+        <button type="button">ภายนอก</button>
+      </>,
+    );
+    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "ภายนอก" }));
+
+    expect(
+      screen.queryByRole("dialog", { name: "เลือกวันเวลา" }),
+    ).not.toBeInTheDocument();
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue("14/08/2569 17:30");
   });
 
   it("discards a popover draft with Cancel", async () => {
