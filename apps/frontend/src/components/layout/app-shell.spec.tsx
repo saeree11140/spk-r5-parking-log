@@ -9,16 +9,20 @@ import { renderWithQueryClient } from "@/test/render";
 
 import { AppShell } from "./app-shell";
 
-const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
+const { navigation, replace } = vi.hoisted(() => ({
+  navigation: { pathname: "/" },
+  replace: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/",
+  usePathname: () => navigation.pathname,
   useRouter: () => ({ replace }),
 }));
 
 describe("AppShell", () => {
   afterEach(() => {
     replace.mockReset();
+    navigation.pathname = "/";
     vi.restoreAllMocks();
     useAuthStore.getState().setChecking();
   });
@@ -51,6 +55,37 @@ describe("AppShell", () => {
     expect(
       screen.queryByRole("link", { name: "ผู้ใช้งาน" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("links the house directory navigation to its own route", () => {
+    useAuthStore.setState({
+      status: "authenticated",
+      user: makeAuthUser({ role: "STAFF" }),
+    });
+
+    renderWithQueryClient(<AppShell>content</AppShell>);
+
+    expect(
+      within(screen.getByRole("complementary")).getByRole("link", {
+        name: "รายชื่อบ้าน",
+      }),
+    ).toHaveAttribute("href", "/houses");
+  });
+
+  it("marks the house directory active on its index route", () => {
+    navigation.pathname = "/houses";
+    useAuthStore.setState({
+      status: "authenticated",
+      user: makeAuthUser({ role: "STAFF" }),
+    });
+
+    renderWithQueryClient(<AppShell>content</AppShell>);
+
+    expect(
+      within(screen.getByRole("complementary")).getByRole("link", {
+        name: "รายชื่อบ้าน",
+      }),
+    ).toHaveAttribute("aria-current", "page");
   });
 
   it("keeps the authenticated state when logout fails", async () => {

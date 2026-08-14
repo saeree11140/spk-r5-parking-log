@@ -55,6 +55,20 @@ afterEach(() => {
 });
 
 describe("DashboardPage", () => {
+  it("keeps the house directory out of the overview route", async () => {
+    vi.spyOn(parkingApi, "getHouses").mockResolvedValue(houses);
+
+    renderWithQueryClient(<DashboardPage />);
+
+    expect(await screen.findByText("บ้านทั้งหมด")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("searchbox", { name: "ค้นหาบ้าน" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "ดูรายละเอียด" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("preserves dashboard layout while houses are loading", () => {
     vi.spyOn(parkingApi, "getHouses").mockReturnValue(new Promise(() => {}));
 
@@ -85,7 +99,7 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ลองใหม่" }));
 
-    expect(await screen.findByText("R5-164")).toBeInTheDocument();
+    expect(await screen.findByText("บ้านทั้งหมด")).toBeInTheDocument();
     expect(parkingApi.getHouses).toHaveBeenCalledTimes(2);
   });
 
@@ -97,7 +111,7 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("ยังไม่มีข้อมูลบ้าน")).toBeInTheDocument();
   });
 
-  it("renders KPI values and sorted house rows", async () => {
+  it("renders KPI values without house rows", async () => {
     vi.spyOn(parkingApi, "getHouses").mockResolvedValue([
       houses[2],
       houses[0],
@@ -109,44 +123,16 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("บ้านทั้งหมด")).toBeInTheDocument();
     expect(screen.getByText("ยอดรอชำระรวม")).toBeInTheDocument();
     expect(screen.getByText("฿1,500")).toBeInTheDocument();
-    const links = screen.getAllByRole("link", { name: "ดูรายละเอียด" });
-    expect(links.map((link) => link.getAttribute("href"))).toEqual([
-      "/houses/R5-001",
-      "/houses/R5-002",
-      "/houses/R5-164",
-    ]);
-  });
-
-  it("searches and filters houses through dashboard UI state", async () => {
-    const user = userEvent.setup();
-    vi.spyOn(parkingApi, "getHouses").mockResolvedValue(houses);
-    renderWithQueryClient(<DashboardPage />);
-    await screen.findByText("R5-164");
-
-    await user.type(
-      screen.getByRole("searchbox", { name: "ค้นหาบ้าน" }),
-      "164",
-    );
-
-    expect(screen.getByText("R5-164")).toBeInTheDocument();
-    expect(screen.queryByText("R5-001")).not.toBeInTheDocument();
-
-    await user.clear(screen.getByRole("searchbox", { name: "ค้นหาบ้าน" }));
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "กรองสถานะบ้าน" }),
-      "PENDING_FINE",
-    );
-
-    expect(screen.queryByText("R5-001")).not.toBeInTheDocument();
-    expect(screen.getByText("R5-002")).toBeInTheDocument();
-    expect(screen.getByText("R5-164")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "ดูรายละเอียด" }),
+    ).not.toBeInTheDocument();
   });
 
   it("refreshes houses only when requested", async () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouses").mockResolvedValue(houses);
     renderWithQueryClient(<DashboardPage />);
-    await screen.findByText("R5-164");
+    await screen.findByText("บ้านทั้งหมด");
 
     await user.click(
       screen.getByRole("button", { name: "รีเฟรชข้อมูลบ้าน" }),

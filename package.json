@@ -17,6 +17,10 @@
     "format": "pnpm --recursive format"
   },
   "devDependencies": {
-    "prettier": "latest"
+    "prettier": "latest",
+    "prisma": "^7.9.1"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.9.1"
   }
 }

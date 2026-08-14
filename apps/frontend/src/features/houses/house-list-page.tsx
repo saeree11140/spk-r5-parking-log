@@ -5,16 +5,16 @@ import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/feedback";
+import { filterHouses } from "@/features/dashboard/dashboard-selectors";
+import { HouseFilters } from "@/features/dashboard/house-filters";
+import { HouseTable } from "@/features/dashboard/house-table";
 import { parkingApi } from "@/lib/api/parking-api";
 import { queryKeys } from "@/lib/query/keys";
+import { useDashboardStore } from "@/stores/dashboard-store";
 
-import { getDashboardMetrics } from "./dashboard-selectors";
-import {
-  DashboardSummary,
-  DashboardSummarySkeleton,
-} from "./dashboard-summary";
-
-export function DashboardPage() {
+export function HouseListPage() {
+  const searchQuery = useDashboardStore((state) => state.searchQuery);
+  const houseFilter = useDashboardStore((state) => state.houseFilter);
   const housesQuery = useQuery({
     queryFn: parkingApi.getHouses,
     queryKey: queryKeys.houses,
@@ -24,9 +24,18 @@ export function DashboardPage() {
 
   if (housesQuery.isPending) {
     return (
-      <div aria-label="กำลังโหลด Dashboard" className="page-stack" role="status">
-        <DashboardHeader onRefresh={() => undefined} refreshing />
-        <DashboardSummarySkeleton />
+      <div
+        aria-label="กำลังโหลดรายชื่อบ้าน"
+        className="page-stack"
+        role="status"
+      >
+        <HouseListHeader onRefresh={() => undefined} refreshing />
+        <div className="loading-table">
+          <span className="skeleton skeleton--title" />
+          <span className="skeleton" />
+          <span className="skeleton" />
+          <span className="skeleton" />
+        </div>
       </div>
     );
   }
@@ -34,7 +43,7 @@ export function DashboardPage() {
   if (housesQuery.isError) {
     return (
       <div className="page-stack">
-        <DashboardHeader onRefresh={() => void housesQuery.refetch()} />
+        <HouseListHeader onRefresh={() => void housesQuery.refetch()} />
         <ErrorState
           message={
             housesQuery.error instanceof Error
@@ -48,25 +57,37 @@ export function DashboardPage() {
   }
 
   const houses = housesQuery.data;
+  const filteredHouses = filterHouses(houses, searchQuery, houseFilter);
 
   return (
     <div className="page-stack">
-      <DashboardHeader
+      <HouseListHeader
         onRefresh={() => void housesQuery.refetch()}
         refreshing={housesQuery.isFetching}
       />
-      <DashboardSummary metrics={getDashboardMetrics(houses)} />
       {houses.length === 0 ? (
         <EmptyState
           description="ตรวจสอบว่า Backend และฐานข้อมูลพร้อมใช้งาน"
           title="ยังไม่มีข้อมูลบ้าน"
         />
-      ) : null}
+      ) : (
+        <>
+          <HouseFilters />
+          {filteredHouses.length === 0 ? (
+            <EmptyState
+              description="ลองเปลี่ยนคำค้นหาหรือตัวกรอง"
+              title="ไม่พบบ้านตามเงื่อนไข"
+            />
+          ) : (
+            <HouseTable houses={filteredHouses} />
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-function DashboardHeader({
+function HouseListHeader({
   onRefresh,
   refreshing = false,
 }: {
@@ -77,8 +98,8 @@ function DashboardHeader({
     <header className="page-header">
       <div>
         <p className="eyebrow">SPK R5 PARKING LOG</p>
-        <h1>ภาพรวมบ้าน</h1>
-        <p>ตรวจสอบ Violation และ Fine ของบ้าน 164 หลัง</p>
+        <h1>รายชื่อบ้าน</h1>
+        <p>ค้นหาและตรวจสอบข้อมูลบ้าน 164 หลัง</p>
       </div>
       <Button
         aria-label="รีเฟรชข้อมูลบ้าน"

@@ -21,7 +21,7 @@ import { useDashboardStore } from "@/stores/dashboard-store";
 
 const navigation = [
   { href: "/", icon: LayoutDashboard, label: "ภาพรวม" },
-  { href: "/", icon: House, label: "รายชื่อบ้าน" },
+  { href: "/houses", icon: House, label: "รายชื่อบ้าน" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -58,7 +58,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav aria-label="เมนูหลัก" className="sidebar-nav">
           {navigation.map(({ href, icon: Icon, label }, index) => {
             const active =
-              index === 0 ? pathname === "/" : pathname.startsWith("/houses/");
+              index === 0
+                ? pathname === "/"
+                : pathname === "/houses" || pathname.startsWith("/houses/");
             return (
               <Link
                 key={label}
