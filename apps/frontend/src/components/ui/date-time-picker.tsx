@@ -11,7 +11,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { toDateTimeLocalValue } from "@/lib/date-time";
+import {
+  isLocalDateTimeInRange,
+  toDateTimeLocalValue,
+} from "@/lib/date-time";
 
 interface DateTimePickerFieldProps {
   disabled?: boolean;
@@ -128,6 +131,7 @@ export const DateTimePickerField = forwardRef<
   const [visibleMonth, setVisibleMonth] = useState(initialParts.date);
   const [timeValue, setTimeValue] = useState(initialParts.time);
   const [isOpen, setOpen] = useState(false);
+  const [localError, setLocalError] = useState<string>();
 
   useEffect(() => {
     if (value === emittedValueRef.current) {
@@ -138,7 +142,10 @@ export const DateTimePickerField = forwardRef<
     const nextParts = partsFromNormalized(value);
     setSelectedDate(nextParts?.date);
     setTimeValue(nextParts?.time ?? "");
-    if (nextParts) setVisibleMonth(nextParts.date);
+    if (nextParts) {
+      setVisibleMonth(nextParts.date);
+      setLocalError(undefined);
+    }
   }, [value]);
 
   function emit(nextValue: string) {
@@ -146,17 +153,33 @@ export const DateTimePickerField = forwardRef<
     onChange(nextValue);
   }
 
+  function emitParts(nextDate: Date | undefined, nextTime: string) {
+    const nextValue = normalizedFromParts(nextDate, nextTime);
+    if (!nextValue) {
+      setLocalError("กรุณาระบุวันเวลาให้ครบ");
+      emit("");
+      return;
+    }
+    if (!isLocalDateTimeInRange(nextValue, minValue, maxValue)) {
+      setLocalError("วันเวลาอยู่นอกช่วงที่กำหนด");
+      emit("");
+      return;
+    }
+    setLocalError(undefined);
+    emit(nextValue);
+  }
+
   function handleDateSelect(nextDate: Date | undefined) {
     if (!nextDate) return;
     setSelectedDate(nextDate);
     setVisibleMonth(nextDate);
-    emit(normalizedFromParts(nextDate, timeValue) ?? "");
+    emitParts(nextDate, timeValue);
     setOpen(false);
   }
 
   function handleTimeChange(nextTime: string) {
     setTimeValue(nextTime);
-    emit(normalizedFromParts(selectedDate, nextTime) ?? "");
+    emitParts(selectedDate, nextTime);
   }
 
   const minimumDate = dateFromNormalized(minValue);
@@ -166,6 +189,7 @@ export const DateTimePickerField = forwardRef<
     ...(minimumDate ? [{ before: minimumDate }] : []),
     ...(maximumDate ? [{ after: maximumDate }] : []),
   ];
+  const visibleError = error ?? localError;
 
   return (
     <div className="date-time-picker form-field">
@@ -176,8 +200,8 @@ export const DateTimePickerField = forwardRef<
             render={
               <Button
                 ref={dateTriggerRef}
-                aria-describedby={error ? errorId : undefined}
-                aria-invalid={error ? "true" : undefined}
+                aria-describedby={visibleError ? errorId : undefined}
+                aria-invalid={visibleError ? "true" : undefined}
                 aria-label={`เลือกวันที่ ${label}`}
                 className="date-time-picker__date-trigger"
                 disabled={disabled}
@@ -220,8 +244,8 @@ export const DateTimePickerField = forwardRef<
         </Popover>
         <input
           ref={forwardedRef}
-          aria-describedby={error ? errorId : undefined}
-          aria-invalid={error ? "true" : undefined}
+          aria-describedby={visibleError ? errorId : undefined}
+          aria-invalid={visibleError ? "true" : undefined}
           aria-label={`เวลา ${label}`}
           disabled={disabled}
           name={name}
@@ -232,9 +256,9 @@ export const DateTimePickerField = forwardRef<
           onChange={(event) => handleTimeChange(event.target.value)}
         />
       </div>
-      {error ? (
-        <small className="field-error" id={errorId}>
-          {error}
+      {visibleError ? (
+        <small className="field-error" id={errorId} role="alert">
+          {visibleError}
         </small>
       ) : null}
     </div>

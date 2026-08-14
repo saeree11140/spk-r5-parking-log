@@ -99,4 +99,79 @@ describe("DateTimePickerField", () => {
       screen.queryByRole("button", { name: "ยกเลิก" }),
     ).not.toBeInTheDocument();
   });
+
+  it("emits an empty form value and exposes an error for a time after maxValue", () => {
+    const onChange = vi.fn();
+    renderWithQueryClient(
+      <PickerHarness
+        maxValue="2026-08-14T17:30"
+        onChangeSpy={onChange}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "18:00" },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith("");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "วันเวลาอยู่นอกช่วงที่กำหนด",
+    );
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("keeps an emptied native time visible while marking the form value incomplete", () => {
+    const onChange = vi.fn();
+    renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
+
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "" },
+    });
+
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue("");
+    expect(onChange).toHaveBeenLastCalledWith("");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "กรุณาระบุวันเวลาให้ครบ",
+    );
+  });
+
+  it("disables calendar dates outside minValue and maxValue", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <PickerHarness
+        maxValue="2026-08-14T23:59"
+        minValue="2026-08-14T00:00"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /13 สิงหาคม 2569/ }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /15 สิงหาคม 2569/ }),
+    ).toBeDisabled();
+  });
+
+  it("closes with Escape and restores focus to the date trigger", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<PickerHarness />);
+    const trigger = screen.getByRole("button", {
+      name: "เลือกวันที่ วันเวลาเกิดเหตุ",
+    });
+
+    await user.click(trigger);
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("dialog", { name: "เลือกวันที่" }),
+    ).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
 });
