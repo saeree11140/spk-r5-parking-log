@@ -52,4 +52,30 @@ describe('ViolationsController', () => {
       }),
     );
   });
+
+  it('delegates violation update using route identifiers', async () => {
+    const update = jest.fn().mockResolvedValue({
+      violation: { id: 'v-1', note: null },
+    });
+    const controller = new ViolationsController({
+      update,
+    } as unknown as ViolationsService);
+    const params = {
+      houseCode: 'R5-001',
+      violationId: '00000000-0000-4000-8000-000000000001',
+    };
+    const dto = { occurredAt: '2026-07-19T10:00:00+07:00', note: null };
+
+    await controller.update(params, dto, authenticatedUser);
+
+    expect(update).toHaveBeenCalledWith(
+      params.houseCode,
+      params.violationId,
+      dto,
+      expect.objectContaining({
+        actorType: 'USER',
+        actorId: authenticatedUser.id,
+      }),
+    );
+  });
 });
