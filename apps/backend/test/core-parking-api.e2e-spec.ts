@@ -112,6 +112,13 @@ describe('Core parking API (e2e)', () => {
       .set('X-CSRF-Token', auth.csrf);
   }
 
+  function patch(path: string) {
+    return auth.agent
+      .patch(path)
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', auth.csrf);
+  }
+
   async function createFive(): Promise<MutationBody[]> {
     const bodies: MutationBody[] = [];
     for (let index = 0; index < 5; index += 1) {
@@ -202,6 +209,124 @@ describe('Core parking API (e2e)', () => {
       await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
     );
     expect(detail.cycles[0]?.pendingAmountBaht).toBe(0);
+  });
+
+  it('edits a violation, reorders its cycle, recalculates fines, and persists the result', async () => {
+    const violations = [
+      bodyAs<MutationBody>(await createViolation(0)),
+      bodyAs<MutationBody>(await createViolation(1)),
+      bodyAs<MutationBody>(await createViolation(2)),
+    ];
+    const earliestOccurredAt = '2026-06-30T09:00:00+07:00';
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${violations[2].violation.id}`,
+    )
+      .send({
+        occurredAt: earliestOccurredAt,
+        note: 'corrected third violation',
+      })
+      .expect(200);
+    const updated = bodyAs<MutationBody>(response);
+
+    expect(updated.violation).toMatchObject({
+      id: violations[2].violation.id,
+      sequenceNumber: 1,
+      occurredAt: new Date(earliestOccurredAt).toISOString(),
+      status: 'WARNING',
+      note: 'corrected third violation',
+      fine: { amountBaht: 0, status: 'CANCELLED' },
+    });
+    expect(updated.currentCycle).toMatchObject({
+      violationCount: 3,
+      pendingFineCount: 1,
+      pendingAmountBaht: 1000,
+    });
+
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(
+      detail.cycles[0]?.violations.map(
+        ({ id, sequenceNumber, status, fine }) => ({
+          id,
+          sequenceNumber,
+          status,
+          fineAmountBaht: fine?.amountBaht ?? null,
+        }),
+      ),
+    ).toEqual([
+      {
+        id: violations[2].violation.id,
+        sequenceNumber: 1,
+        status: 'WARNING',
+        fineAmountBaht: 0,
+      },
+      {
+        id: violations[0].violation.id,
+        sequenceNumber: 2,
+        status: 'WARNING',
+        fineAmountBaht: null,
+      },
+      {
+        id: violations[1].violation.id,
+        sequenceNumber: 3,
+        status: 'PENDING_FINE',
+        fineAmountBaht: 1000,
+      },
+    ]);
+  });
+
+  it('clears an existing note when an edit supplies a blank note', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[0], note: '   ' })
+      .expect(200);
+
+    expect(bodyAs<MutationBody>(response).violation.note).toBeNull();
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(detail.cycles[0]?.violations[0]?.note).toBeNull();
+  });
+
+  it('rejects an edit to a cancelled violation', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+    await mutation(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}/cancel`,
+    )
+      .send({ reason: 'entered by mistake' })
+      .expect(200);
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[1], note: 'cannot restore by editing' })
+      .expect(409);
+
+    expect(bodyAs<ErrorBody>(response).code).toBe(
+      'VIOLATION_ALREADY_CANCELLED',
+    );
+  });
+
+  it('rejects an edit when its cycle contains a paid fine', async () => {
+    const violations = await createFive();
+    await mutation(
+      `/api/houses/${HOUSE_CODE}/violations/${violations[2].violation.id}/mark-paid`,
+    )
+      .send({ paidAt: '2026-07-06T10:00:00+07:00', reference: 'receipt-1' })
+      .expect(200);
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${violations[0].violation.id}`,
+    )
+      .send({ occurredAt: '2026-06-30T09:00:00+07:00', note: 'blocked' })
+      .expect(409);
+
+    expect(bodyAs<ErrorBody>(response).code).toBe('PAID_CYCLE_IMMUTABLE');
   });
 
   it('blocks cancel and backdate after paid without writing rollback audit', async () => {
