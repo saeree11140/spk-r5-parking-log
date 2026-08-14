@@ -63,13 +63,16 @@ class AuthTestHarness {
       }),
     );
     this.app.useGlobalFilters(new ApiExceptionFilter());
-    await this.app.init();
+    await this.app.listen(0, '127.0.0.1');
     this.prisma = this.app.get(PrismaService);
   }
 
   async stop(): Promise<void> {
-    await this.cleanup();
-    if (this.app) await this.app.close();
+    try {
+      await this.cleanup();
+    } finally {
+      if (this.app) await this.app.close();
+    }
   }
 
   async createUser(

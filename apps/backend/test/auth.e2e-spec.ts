@@ -13,6 +13,36 @@ describe('Authentication and authorization (e2e)', () => {
   afterEach(() => harness.cleanup());
   afterAll(() => harness.stop());
 
+  it('keeps the HTTP server listening across agent requests', async () => {
+    const server = harness.app.getHttpServer() as { listening: boolean };
+    expect(server.listening).toBe(true);
+
+    const staff = await harness.createUser('STAFF');
+    const auth = await harness.login(staff);
+    await auth.agent.get('/api/auth/me').expect(200);
+
+    expect(server.listening).toBe(true);
+  });
+
+  it('closes the HTTP server when cleanup fails', async () => {
+    const stoppingHarness = createAuthTestHarness();
+    await stoppingHarness.start();
+    const server = stoppingHarness.app.getHttpServer() as {
+      listening: boolean;
+    };
+    const cleanup = jest
+      .spyOn(stoppingHarness, 'cleanup')
+      .mockRejectedValueOnce(new Error('cleanup failed'));
+
+    try {
+      await expect(stoppingHarness.stop()).rejects.toThrow('cleanup failed');
+      expect(server.listening).toBe(false);
+    } finally {
+      cleanup.mockRestore();
+      if (server.listening) await stoppingHarness.stop();
+    }
+  });
+
   it('rejects house data without authentication', () =>
     request(harness.app.getHttpServer())
       .get('/api/houses')
