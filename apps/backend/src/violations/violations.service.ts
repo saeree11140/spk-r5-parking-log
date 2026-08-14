@@ -14,6 +14,7 @@ import { mapViolation, summarizeCycle } from '../houses/houses.types';
 import type { CreateViolationDto } from './create-violation.dto';
 import type { CancelViolationDto } from './cancel-violation.dto';
 import { resequenceCycle } from './violation-resequence';
+import type { UpdateViolationDto } from './update-violation.dto';
 
 export interface ViolationMutationResponse {
   violation: ViolationResponse;
@@ -165,6 +166,77 @@ export class ViolationsService {
           status: cancelled.status,
           cancelledAt: cancelledAt.toISOString(),
           cancellationReason: dto.reason,
+        },
+        actor,
+      );
+
+      return this.loadMutationResponse(tx, violation.id, violation.cycleId);
+    });
+  }
+
+  async update(
+    houseCode: string,
+    violationId: string,
+    dto: UpdateViolationDto,
+    actor: AuditActor,
+  ): Promise<ViolationMutationResponse> {
+    const occurredAt = parsePastDateTime(dto.occurredAt, new Date());
+
+    return runSerializable(this.prisma, async (tx) => {
+      const violation = await tx.parkingViolation.findFirst({
+        where: { id: violationId, cycle: { house: { code: houseCode } } },
+        include: { cycle: true, fine: true },
+      });
+      if (!violation) {
+        throw new DomainError(
+          404,
+          'VIOLATION_NOT_FOUND',
+          'Violation not found',
+        );
+      }
+      if (violation.cycle.status !== 'OPEN') {
+        throw new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed');
+      }
+      if (violation.status === 'CANCELLED') {
+        throw new DomainError(
+          409,
+          'VIOLATION_ALREADY_CANCELLED',
+          'Violation is already cancelled',
+        );
+      }
+
+      const paidFineCount = await tx.fine.count({
+        where: { status: 'PAID', violation: { cycleId: violation.cycleId } },
+      });
+      if (paidFineCount > 0) {
+        throw new DomainError(
+          409,
+          'PAID_CYCLE_IMMUTABLE',
+          'Paid cycle cannot be modified',
+        );
+      }
+
+      const updated = await tx.parkingViolation.update({
+        where: { id: violation.id },
+        data: {
+          occurredAt,
+          ...(dto.note !== undefined ? { note: dto.note ?? null } : {}),
+        },
+      });
+
+      await resequenceCycle(tx, violation.cycleId, actor);
+      await writeAudit(
+        tx,
+        'ParkingViolation',
+        violation.id,
+        'UPDATE',
+        {
+          occurredAt: violation.occurredAt.toISOString(),
+          note: violation.note,
+        },
+        {
+          occurredAt: updated.occurredAt.toISOString(),
+          note: updated.note,
         },
         actor,
       );

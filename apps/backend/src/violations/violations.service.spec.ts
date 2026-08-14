@@ -1,6 +1,9 @@
+import { plainToInstance } from 'class-transformer';
+
 import { SYSTEM_ACTOR } from '../audit/audit-log';
 import type { PrismaService } from '../database/prisma.service';
 import { DomainError } from '../common/domain-error';
+import { UpdateViolationDto } from './update-violation.dto';
 import { ViolationsService } from './violations.service';
 
 const occurredAt = '2026-07-18T10:00:00+07:00';
@@ -341,5 +344,232 @@ describe('ViolationsService.cancel', () => {
     });
     expect(result.violation.status).toBe('CANCELLED');
     expect(auditCreate).toHaveBeenCalled();
+  });
+});
+
+describe('ViolationsService.update', () => {
+  function baseViolation(overrides: Record<string, unknown> = {}) {
+    return {
+      id: '00000000-0000-4000-8000-000000000004',
+      cycleId: 'cycle-1',
+      sequenceNumber: 1,
+      occurredAt: new Date('2026-07-18T03:00:00Z'),
+      createdAt: new Date('2026-07-18T03:00:00Z'),
+      status: 'WARNING',
+      note: 'stored note',
+      cancelledAt: null,
+      cancellationReason: null,
+      cycle: {
+        id: 'cycle-1',
+        cycleNumber: 1,
+        status: 'OPEN',
+        openedAt: new Date('2026-07-01T00:00:00Z'),
+        closedAt: null,
+      },
+      fine: null,
+      ...overrides,
+    };
+  }
+
+  it('rejects a missing or mismatched violation', async () => {
+    const tx = {
+      parkingViolation: { findFirst: jest.fn().mockResolvedValue(null) },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    await expect(
+      service.update(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000004',
+        { occurredAt },
+        SYSTEM_ACTOR,
+      ),
+    ).rejects.toEqual(
+      new DomainError(404, 'VIOLATION_NOT_FOUND', 'Violation not found'),
+    );
+  });
+
+  it('rejects an update for a closed cycle', async () => {
+    const tx = {
+      parkingViolation: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue(
+            baseViolation({ cycle: { id: 'cycle-1', status: 'CLOSED' } }),
+          ),
+      },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    await expect(
+      service.update(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000004',
+        { occurredAt },
+        SYSTEM_ACTOR,
+      ),
+    ).rejects.toEqual(new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed'));
+  });
+
+  it('rejects an update for a cancelled violation', async () => {
+    const tx = {
+      parkingViolation: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue(baseViolation({ status: 'CANCELLED' })),
+      },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    await expect(
+      service.update(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000004',
+        { occurredAt },
+        SYSTEM_ACTOR,
+      ),
+    ).rejects.toEqual(
+      new DomainError(
+        409,
+        'VIOLATION_ALREADY_CANCELLED',
+        'Violation is already cancelled',
+      ),
+    );
+  });
+
+  it('rejects an update after any fine in the cycle is paid', async () => {
+    const tx = {
+      parkingViolation: {
+        findFirst: jest.fn().mockResolvedValue(baseViolation()),
+      },
+      fine: { count: jest.fn().mockResolvedValue(1) },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    await expect(
+      service.update(
+        'R5-001',
+        '00000000-0000-4000-8000-000000000004',
+        { occurredAt },
+        SYSTEM_ACTOR,
+      ),
+    ).rejects.toEqual(
+      new DomainError(
+        409,
+        'PAID_CYCLE_IMMUTABLE',
+        'Paid cycle cannot be modified',
+      ),
+    );
+  });
+
+  it('updates a violation, resequences its cycle, and audits before and after data', async () => {
+    const original = baseViolation();
+    const updated = {
+      ...original,
+      occurredAt: new Date('2026-07-19T03:00:00Z'),
+      note: null,
+    };
+    const update = jest.fn().mockResolvedValue(updated);
+    const auditCreate = jest.fn().mockResolvedValue({});
+    const tx = {
+      parkingViolation: {
+        findFirst: jest.fn().mockResolvedValue(original),
+        update,
+        findMany: jest.fn().mockResolvedValue([updated]),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(updated),
+      },
+      violationCycle: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          ...original.cycle,
+          violations: [updated],
+        }),
+      },
+      fine: {
+        count: jest.fn().mockResolvedValue(0),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        upsert: jest.fn(),
+      },
+      auditLog: { create: auditCreate },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    const result = await service.update(
+      'R5-001',
+      original.id,
+      { occurredAt: '2026-07-19T10:00:00+07:00', note: null },
+      SYSTEM_ACTOR,
+    );
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: original.id },
+      data: { occurredAt: new Date('2026-07-19T03:00:00Z'), note: null },
+    });
+    expect(update).toHaveBeenCalledWith({
+      where: { id: original.id },
+      data: { sequenceNumber: 1, status: 'WARNING' },
+    });
+    expect(auditCreate).toHaveBeenCalledWith({
+      data: {
+        entityType: 'ParkingViolation',
+        entityId: original.id,
+        action: 'UPDATE',
+        before: {
+          occurredAt: original.occurredAt.toISOString(),
+          note: 'stored note',
+        },
+        after: {
+          occurredAt: updated.occurredAt.toISOString(),
+          note: null,
+        },
+        actorType: 'SYSTEM',
+        actorId: null,
+        actorLabel: 'core-api',
+      },
+    });
+    expect(result.violation.id).toBe(original.id);
+    expect(result.violation.occurredAt).toBe(updated.occurredAt.toISOString());
+    expect(result.violation.note).toBeNull();
+    expect(result.currentCycle.id).toBe(original.cycleId);
+  });
+
+  it('leaves the stored note unchanged when note is omitted', async () => {
+    const original = baseViolation();
+    const updated = {
+      ...original,
+      occurredAt: new Date('2026-07-19T03:00:00Z'),
+    };
+    const update = jest.fn().mockResolvedValue(updated);
+    const tx = {
+      parkingViolation: {
+        findFirst: jest.fn().mockResolvedValue(original),
+        update,
+        findMany: jest.fn().mockResolvedValue([updated]),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(updated),
+      },
+      violationCycle: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          ...original.cycle,
+          violations: [updated],
+        }),
+      },
+      fine: {
+        count: jest.fn().mockResolvedValue(0),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        upsert: jest.fn(),
+      },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    const dto = plainToInstance(UpdateViolationDto, {
+      occurredAt: '2026-07-19T10:00:00+07:00',
+    });
+
+    await service.update('R5-001', original.id, dto, SYSTEM_ACTOR);
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: original.id },
+      data: { occurredAt: new Date('2026-07-19T03:00:00Z') },
+    });
   });
 });

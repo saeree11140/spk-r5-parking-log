@@ -112,6 +112,13 @@ describe('Core parking API (e2e)', () => {
       .set('X-CSRF-Token', auth.csrf);
   }
 
+  function patch(path: string) {
+    return auth.agent
+      .patch(path)
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', auth.csrf);
+  }
+
   async function createFive(): Promise<MutationBody[]> {
     const bodies: MutationBody[] = [];
     for (let index = 0; index < 5; index += 1) {
@@ -202,6 +209,196 @@ describe('Core parking API (e2e)', () => {
       await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
     );
     expect(detail.cycles[0]?.pendingAmountBaht).toBe(0);
+  });
+
+  it('edits a violation, reorders its cycle, recalculates fines, and persists the result', async () => {
+    const violations = [
+      bodyAs<MutationBody>(await createViolation(0)),
+      bodyAs<MutationBody>(await createViolation(1)),
+      bodyAs<MutationBody>(await createViolation(2)),
+    ];
+    const earliestOccurredAt = '2026-06-30T09:00:00+07:00';
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${violations[2].violation.id}`,
+    )
+      .send({
+        occurredAt: earliestOccurredAt,
+        note: 'corrected third violation',
+      })
+      .expect(200);
+    const updated = bodyAs<MutationBody>(response);
+
+    expect(updated.violation).toMatchObject({
+      id: violations[2].violation.id,
+      sequenceNumber: 1,
+      occurredAt: new Date(earliestOccurredAt).toISOString(),
+      status: 'WARNING',
+      note: 'corrected third violation',
+      fine: { amountBaht: 0, status: 'CANCELLED' },
+    });
+    expect(updated.currentCycle).toMatchObject({
+      violationCount: 3,
+      pendingFineCount: 1,
+      pendingAmountBaht: 1000,
+    });
+
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(
+      detail.cycles[0]?.violations.map(
+        ({ id, sequenceNumber, occurredAt, status, note, fine }) => ({
+          id,
+          sequenceNumber,
+          occurredAt,
+          status,
+          note,
+          fine: fine
+            ? { status: fine.status, amountBaht: fine.amountBaht }
+            : null,
+        }),
+      ),
+    ).toEqual([
+      {
+        id: violations[2].violation.id,
+        sequenceNumber: 1,
+        occurredAt: new Date(earliestOccurredAt).toISOString(),
+        status: 'WARNING',
+        note: 'corrected third violation',
+        fine: { status: 'CANCELLED', amountBaht: 0 },
+      },
+      {
+        id: violations[0].violation.id,
+        sequenceNumber: 2,
+        occurredAt: new Date(occurredAt[0]).toISOString(),
+        status: 'WARNING',
+        note: 'violation 1',
+        fine: null,
+      },
+      {
+        id: violations[1].violation.id,
+        sequenceNumber: 3,
+        occurredAt: new Date(occurredAt[1]).toISOString(),
+        status: 'PENDING_FINE',
+        note: 'violation 2',
+        fine: { status: 'PENDING', amountBaht: 1000 },
+      },
+    ]);
+
+    const cancelledFineId = violations[2].violation.fine?.id;
+    expect(cancelledFineId).toBeDefined();
+    if (!cancelledFineId) throw new Error('Expected original fine');
+    const cancelledFineAudits = await prisma.auditLog.findMany({
+      where: {
+        action: 'UPDATE',
+        entityId: cancelledFineId,
+        entityType: 'Fine',
+      },
+    });
+    expect(cancelledFineAudits).toEqual([
+      expect.objectContaining({
+        after: { amountBaht: 0, status: 'CANCELLED' },
+        before: { amountBaht: 1000, status: 'PENDING' },
+      }),
+    ]);
+
+    const pendingFine = detail.cycles[0]?.violations.find(
+      ({ id }) => id === violations[1].violation.id,
+    )?.fine;
+    expect(pendingFine).not.toBeNull();
+    if (!pendingFine) throw new Error('Expected replacement pending fine');
+    const pendingFineAudits = await prisma.auditLog.findMany({
+      where: {
+        action: 'CREATE',
+        entityId: pendingFine.id,
+        entityType: 'Fine',
+      },
+    });
+    expect(pendingFineAudits).toEqual([
+      expect.objectContaining({
+        after: { amountBaht: 1000, status: 'PENDING' },
+        before: null,
+      }),
+    ]);
+  });
+
+  it('preserves an existing note when the HTTP patch omits note', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[0] })
+      .expect(200);
+
+    expect(bodyAs<MutationBody>(response).violation.note).toBe('violation 1');
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(detail.cycles[0]?.violations[0]?.note).toBe('violation 1');
+  });
+
+  it('clears an existing note when an edit supplies a blank note', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[0], note: '   ' })
+      .expect(200);
+
+    expect(bodyAs<MutationBody>(response).violation.note).toBeNull();
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(detail.cycles[0]?.violations[0]?.note).toBeNull();
+  });
+
+  it('rejects an edit to a cancelled violation', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+    await mutation(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}/cancel`,
+    )
+      .send({ reason: 'entered by mistake' })
+      .expect(200);
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[1], note: 'cannot restore by editing' })
+      .expect(409);
+
+    expect(bodyAs<ErrorBody>(response).code).toBe(
+      'VIOLATION_ALREADY_CANCELLED',
+    );
+  });
+
+  it('rejects an edit when its cycle contains a paid fine', async () => {
+    const violations = await createFive();
+    const payment = bodyAs<PaidBody>(
+      await mutation(
+        `/api/houses/${HOUSE_CODE}/violations/${violations[2].violation.id}/mark-paid`,
+      )
+        .send({
+          paidAt: '2026-07-06T10:00:00+07:00',
+          reference: 'receipt-1',
+        })
+        .expect(200),
+    );
+    expect(payment.cycleClosed).toBe(false);
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(detail.cycles[0]?.status).toBe('OPEN');
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${violations[0].violation.id}`,
+    )
+      .send({ occurredAt: '2026-06-30T09:00:00+07:00', note: 'blocked' })
+      .expect(409);
+
+    expect(bodyAs<ErrorBody>(response).code).toBe('PAID_CYCLE_IMMUTABLE');
   });
 
   it('blocks cancel and backdate after paid without writing rollback audit', async () => {

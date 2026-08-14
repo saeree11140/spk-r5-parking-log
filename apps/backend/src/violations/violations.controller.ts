@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -15,6 +16,7 @@ import { toAuditActor } from '../audit/audit-log';
 import { HouseCodeDto } from '../houses/house-code.dto';
 import { CancelViolationDto } from './cancel-violation.dto';
 import { CreateViolationDto } from './create-violation.dto';
+import { UpdateViolationDto } from './update-violation.dto';
 import {
   ViolationsService,
   type ViolationMutationResponse,
@@ -44,6 +46,20 @@ export class ViolationsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ViolationMutationResponse> {
     return this.violations.cancel(
+      params.houseCode,
+      params.violationId,
+      dto,
+      toAuditActor(user),
+    );
+  }
+
+  @Patch(':houseCode/violations/:violationId')
+  update(
+    @Param() params: ViolationRouteDto,
+    @Body() dto: UpdateViolationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ViolationMutationResponse> {
+    return this.violations.update(
       params.houseCode,
       params.violationId,
       dto,

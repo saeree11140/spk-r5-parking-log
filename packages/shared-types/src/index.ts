@@ -128,6 +128,11 @@ export interface CreateViolationInput {
   note?: string;
 }
 
+export interface UpdateViolationInput {
+  occurredAt: string;
+  note?: string | null;
+}
+
 export interface CancelViolationInput {
   reason: string;
 }

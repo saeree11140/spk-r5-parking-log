@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   cancelViolationSchema,
   createViolationSchema,
+  editViolationSchema,
   markFinePaidSchema,
 } from "./schemas";
 
@@ -52,6 +53,36 @@ describe("createViolationSchema", () => {
     expect(messages(result)).toContain(
       "หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร",
     );
+  });
+});
+
+describe("editViolationSchema", () => {
+  it("requires an occurred-at value", () => {
+    const result = editViolationSchema(now).safeParse({ occurredAt: "" });
+
+    expect(messages(result)).toContain("กรุณาระบุวันเวลา");
+  });
+
+  it("rejects an occurred-at value in the future", () => {
+    const result = editViolationSchema(now).safeParse({
+      occurredAt: "2026-07-20T10:01",
+    });
+
+    expect(messages(result)).toContain("วันเวลาต้องไม่อยู่ในอนาคต");
+  });
+
+  it("trims note and omits a blank note at form level", () => {
+    const schema = editViolationSchema(now);
+
+    expect(
+      schema.parse({
+        note: "  จอดกีดขวาง  ",
+        occurredAt: "2026-07-20T10:00",
+      }).note,
+    ).toBe("จอดกีดขวาง");
+    expect(
+      schema.parse({ note: "   ", occurredAt: "2026-07-20T10:00" }).note,
+    ).toBeUndefined();
   });
 });
 

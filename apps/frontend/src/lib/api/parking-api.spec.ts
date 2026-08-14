@@ -2,6 +2,7 @@ import type {
   HouseDetail,
   HouseSummary,
   MarkFinePaidResponse,
+  UpdateViolationInput,
   ViolationMutationResponse,
 } from "@spk-r5-parking-log/shared-types";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -42,6 +43,23 @@ describe("parkingApi", () => {
     );
     expect(apiClient.post).toHaveBeenCalledWith(
       "/houses/R5-001/violations",
+      input,
+    );
+  });
+
+  it("updates a violation using encoded house and violation IDs", async () => {
+    const data = {} as ViolationMutationResponse;
+    const input: UpdateViolationInput = {
+      occurredAt: "2026-07-01T03:00:00.000Z",
+      note: null,
+    };
+    vi.spyOn(apiClient, "patch").mockResolvedValue({ data });
+
+    await expect(
+      parkingApi.updateViolation("A/1", "violation/1", input),
+    ).resolves.toBe(data);
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      "/houses/A%2F1/violations/violation%2F1",
       input,
     );
   });

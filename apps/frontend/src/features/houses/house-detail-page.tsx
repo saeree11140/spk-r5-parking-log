@@ -16,6 +16,7 @@ import {
 import { MarkFinePaidModal } from "@/features/payments/mark-fine-paid-modal";
 import { CancelViolationModal } from "@/features/violations/cancel-violation-modal";
 import { CreateViolationModal } from "@/features/violations/create-violation-modal";
+import { EditViolationModal } from "@/features/violations/edit-violation-modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { parkingApi } from "@/lib/api/parking-api";
 import { queryKeys } from "@/lib/query/keys";
@@ -26,6 +27,7 @@ import { HouseSummary } from "./house-summary";
 type ActiveDialog =
   | { type: "create" }
   | { type: "cancel"; violation: ViolationResponse }
+  | { type: "edit"; violation: ViolationResponse }
   | { type: "markPaid"; violation: ViolationResponse }
   | null;
 
@@ -123,6 +125,10 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
             setSuccessMessage(null);
             setActiveDialog({ type: "cancel", violation });
           }}
+          onEditViolation={(violation) => {
+            setSuccessMessage(null);
+            setActiveDialog({ type: "edit", violation });
+          }}
           onMarkPaid={(violation) => {
             setSuccessMessage(null);
             setActiveDialog({ type: "markPaid", violation });
@@ -137,6 +143,15 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
       />
       {activeDialog?.type === "cancel" ? (
         <CancelViolationModal
+          houseCode={houseCode}
+          onClose={() => setActiveDialog(null)}
+          onSuccess={setSuccessMessage}
+          open
+          violation={activeDialog.violation}
+        />
+      ) : null}
+      {activeDialog?.type === "edit" ? (
+        <EditViolationModal
           houseCode={houseCode}
           onClose={() => setActiveDialog(null)}
           onSuccess={setSuccessMessage}
