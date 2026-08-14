@@ -248,31 +248,41 @@ describe('Core parking API (e2e)', () => {
     );
     expect(
       detail.cycles[0]?.violations.map(
-        ({ id, sequenceNumber, status, fine }) => ({
+        ({ id, sequenceNumber, occurredAt, status, note, fine }) => ({
           id,
           sequenceNumber,
+          occurredAt,
           status,
-          fineAmountBaht: fine?.amountBaht ?? null,
+          note,
+          fine: fine
+            ? { status: fine.status, amountBaht: fine.amountBaht }
+            : null,
         }),
       ),
     ).toEqual([
       {
         id: violations[2].violation.id,
         sequenceNumber: 1,
+        occurredAt: new Date(earliestOccurredAt).toISOString(),
         status: 'WARNING',
-        fineAmountBaht: 0,
+        note: 'corrected third violation',
+        fine: { status: 'CANCELLED', amountBaht: 0 },
       },
       {
         id: violations[0].violation.id,
         sequenceNumber: 2,
+        occurredAt: new Date(occurredAt[0]).toISOString(),
         status: 'WARNING',
-        fineAmountBaht: null,
+        note: 'violation 1',
+        fine: null,
       },
       {
         id: violations[1].violation.id,
         sequenceNumber: 3,
+        occurredAt: new Date(occurredAt[1]).toISOString(),
         status: 'PENDING_FINE',
-        fineAmountBaht: 1000,
+        note: 'violation 2',
+        fine: { status: 'PENDING', amountBaht: 1000 },
       },
     ]);
   });
@@ -314,11 +324,21 @@ describe('Core parking API (e2e)', () => {
 
   it('rejects an edit when its cycle contains a paid fine', async () => {
     const violations = await createFive();
-    await mutation(
-      `/api/houses/${HOUSE_CODE}/violations/${violations[2].violation.id}/mark-paid`,
-    )
-      .send({ paidAt: '2026-07-06T10:00:00+07:00', reference: 'receipt-1' })
-      .expect(200);
+    const payment = bodyAs<PaidBody>(
+      await mutation(
+        `/api/houses/${HOUSE_CODE}/violations/${violations[2].violation.id}/mark-paid`,
+      )
+        .send({
+          paidAt: '2026-07-06T10:00:00+07:00',
+          reference: 'receipt-1',
+        })
+        .expect(200),
+    );
+    expect(payment.cycleClosed).toBe(false);
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(detail.cycles[0]?.status).toBe('OPEN');
 
     const response = await patch(
       `/api/houses/${HOUSE_CODE}/violations/${violations[0].violation.id}`,
