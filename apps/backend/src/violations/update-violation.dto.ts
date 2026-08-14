@@ -6,7 +6,6 @@ import {
   Matches,
   MaxLength,
   Validate,
-  type ValidationArguments,
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
@@ -19,7 +18,7 @@ class IsPastDateTimeConstraint implements ValidatorConstraintInterface {
     return !Number.isNaN(parsed.getTime()) && parsed.getTime() <= Date.now();
   }
 
-  defaultMessage(_args: ValidationArguments): string {
+  defaultMessage(): string {
     return 'occurredAt must not be in the future';
   }
 }
@@ -33,7 +32,7 @@ export class UpdateViolationDto {
 
   @IsOptional()
   @Transform(({ value }: TransformFnParams) => {
-    if (typeof value !== 'string') return value;
+    if (typeof value !== 'string') return value as unknown;
     const trimmed = value.trim();
     return trimmed === '' ? null : trimmed;
   })
