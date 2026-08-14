@@ -5,7 +5,7 @@
 ## ความสามารถปัจจุบัน
 
 - Dashboard สรุปจำนวนบ้าน, Violation, Fine รอชำระ และยอดค้าง
-- ค้นหาบ้านและกรองตามสถานะ
+- หน้ารายชื่อบ้าน `/houses` สำหรับค้นหาและกรองตามสถานะ
 - หน้ารายละเอียดบ้าน `R5-001` ถึง `R5-164`
 - แสดง Cycle และประวัติ Violation ตามลำดับที่ Backend คำนวณ
 - เพิ่มและยกเลิก Violation
@@ -84,6 +84,7 @@ Build จะสร้าง Static HTML สำหรับ Dashboard และ�
 /login
 /change-password
 /users
+/houses
 /houses/R5-001
 ...
 /houses/R5-164
