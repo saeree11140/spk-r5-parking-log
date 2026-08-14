@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -282,8 +282,11 @@ describe("HouseDetailPage", () => {
     expect(
       screen.getByRole("dialog", { name: "แก้ไข Violation" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "01/07/2569 10:00",
+    expect(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    ).toHaveTextContent("01/07/2569");
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
+      "10:00",
     );
     expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("ทดสอบ");
     await user.click(screen.getByRole("button", { name: "ปิด" }));
@@ -356,9 +359,16 @@ describe("HouseDetailPage", () => {
     await user.click(
       screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 3" }),
     );
-    const occurredAtInput = screen.getByLabelText("วันเวลาเกิดเหตุ");
-    await user.clear(occurredAtInput);
-    await user.type(occurredAtInput, "300625690900");
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    );
+    await user.click(screen.getByRole("button", { name: "เดือนก่อนหน้า" }));
+    await user.click(
+      screen.getByRole("button", { name: /ที่ 30 มิถุนายน 2569$/ }),
+    );
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "09:00" },
+    });
     const noteInput = screen.getByLabelText("หมายเหตุ");
     await user.clear(noteInput);
     await user.type(noteInput, "แก้ลำดับแล้ว");

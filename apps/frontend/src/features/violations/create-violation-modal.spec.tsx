@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -27,17 +27,17 @@ describe("CreateViolationModal", () => {
       />,
     );
 
-    const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
-    await user.clear(occurredAt);
-    await user.type(occurredAt, "010135421000");
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "23:59" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "วันเวลาอยู่นอกช่วงที่กำหนด",
+    );
     await user.type(screen.getByLabelText("หมายเหตุ"), "ก".repeat(1001));
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
     expect(
-      await screen.findByText("วันเวลาต้องไม่อยู่ในอนาคต"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร"),
+      await screen.findByText("หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร"),
     ).toBeInTheDocument();
   });
 
@@ -59,9 +59,16 @@ describe("CreateViolationModal", () => {
       { queryClient },
     );
 
-    const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
-    await user.clear(occurredAt);
-    await user.type(occurredAt, "010725691000");
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    );
+    await user.click(screen.getByRole("button", { name: "เดือนก่อนหน้า" }));
+    await user.click(
+      screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
+    );
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "10:00" },
+    });
     await user.type(screen.getByLabelText("หมายเหตุ"), "  จอดกีดขวาง  ");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
@@ -96,9 +103,6 @@ describe("CreateViolationModal", () => {
       />,
     );
 
-    const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
-    await user.clear(occurredAt);
-    await user.type(occurredAt, "010725691000");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
     expect(await screen.findByText("บ้านนี้ปิดใช้งาน")).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterAll,
@@ -52,8 +52,11 @@ describe("EditViolationModal", () => {
       />,
     );
 
-    expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "01/07/2569 10:00",
+    expect(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    ).toHaveTextContent("01/07/2569");
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
+      "10:00",
     );
     expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("จอดกีดขวาง");
   });
@@ -77,9 +80,15 @@ describe("EditViolationModal", () => {
       { queryClient },
     );
 
-    const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
-    await user.clear(occurredAt);
-    await user.type(occurredAt, "020725691130");
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /ที่ 2 กรกฎาคม 2569$/ }),
+    );
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "11:30" },
+    });
     const note = screen.getByLabelText("หมายเหตุ");
     await user.clear(note);
     await user.type(note, "  แก้ไขรายละเอียด  ");

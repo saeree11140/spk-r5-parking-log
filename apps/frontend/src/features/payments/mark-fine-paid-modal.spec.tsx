@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -46,14 +46,17 @@ describe("MarkFinePaidModal", () => {
       />,
     );
 
-    const paidAt = screen.getByLabelText("วันเวลาชำระ");
-    await user.clear(paidAt);
-    await user.type(paidAt, "010725691000");
     await user.click(
-      screen.getByRole("button", { name: /เปิดปฏิทิน วันเวลาชำระ/ }),
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาชำระ" }),
     );
+    await user.click(screen.getByRole("button", { name: "เดือนก่อนหน้า" }));
+    await user.click(
+      screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
+    );
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาชำระ"), {
+      target: { value: "10:00" },
+    });
 
-    expect(screen.getByRole("button", { name: "นำไปใช้" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(
       "วันเวลาอยู่นอกช่วงที่กำหนด",
     );
@@ -61,6 +64,9 @@ describe("MarkFinePaidModal", () => {
 
   it("has no amount field and rejects payment before violation", async () => {
     const user = userEvent.setup();
+    const markFinePaid = vi
+      .spyOn(parkingApi, "markFinePaid")
+      .mockResolvedValue({} as never);
     renderWithQueryClient(
       <MarkFinePaidModal
         houseCode="R5-001"
@@ -75,14 +81,22 @@ describe("MarkFinePaidModal", () => {
       screen.getByText("เมื่อบันทึกว่าชำระแล้ว จะย้อนกลับไม่ได้ในระบบนี้"),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("จำนวนเงิน")).not.toBeInTheDocument();
-    const paidAt = screen.getByLabelText("วันเวลาชำระ");
-    await user.clear(paidAt);
-    await user.type(paidAt, "010725690959");
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาชำระ" }),
+    );
+    await user.click(screen.getByRole("button", { name: "เดือนก่อนหน้า" }));
+    await user.click(
+      screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
+    );
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาชำระ"), {
+      target: { value: "09:59" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "วันเวลาอยู่นอกช่วงที่กำหนด",
+    );
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
 
-    expect(
-      await screen.findByText("เวลาชำระต้องไม่ก่อนเวลาเกิดเหตุ"),
-    ).toBeInTheDocument();
+    expect(markFinePaid).not.toHaveBeenCalled();
   });
 
   it("submits ISO time without amount and invalidates both queries", async () => {
@@ -104,9 +118,16 @@ describe("MarkFinePaidModal", () => {
       { queryClient },
     );
 
-    const paidAt = screen.getByLabelText("วันเวลาชำระ");
-    await user.clear(paidAt);
-    await user.type(paidAt, "010725691000");
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาชำระ" }),
+    );
+    await user.click(screen.getByRole("button", { name: "เดือนก่อนหน้า" }));
+    await user.click(
+      screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
+    );
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาชำระ"), {
+      target: { value: "10:00" },
+    });
     await user.type(screen.getByLabelText("เลขอ้างอิง"), "  receipt-001  ");
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
 
@@ -147,9 +168,6 @@ describe("MarkFinePaidModal", () => {
       />,
     );
 
-    const paidAt = screen.getByLabelText("วันเวลาชำระ");
-    await user.clear(paidAt);
-    await user.type(paidAt, "010725691000");
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
 
     expect(await screen.findByText("Fine ถูกชำระแล้ว")).toBeInTheDocument();
