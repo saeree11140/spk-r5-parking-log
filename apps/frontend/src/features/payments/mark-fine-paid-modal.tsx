@@ -10,7 +10,11 @@ import { DateTimePickerField } from "@/components/ui/date-time-picker";
 import { Modal } from "@/components/ui/modal";
 import { formatBaht } from "@/features/dashboard/dashboard-summary";
 import { parkingApi } from "@/lib/api/parking-api";
-import { localDateTimeToIso, toDateTimeLocalValue } from "@/lib/date-time";
+import {
+  localDateTimeToIso,
+  toDateTimeLocalCeilingValue,
+  toDateTimeLocalValue,
+} from "@/lib/date-time";
 import {
   markFinePaidSchema,
   type MarkFinePaidFormInput,
@@ -36,7 +40,7 @@ export function MarkFinePaidModal({
   const queryClient = useQueryClient();
   const now = new Date();
   const maximumPaidAt = toDateTimeLocalValue(now);
-  const minimumPaidAt = toDateTimeLocalValue(violation.occurredAt);
+  const minimumPaidAt = toDateTimeLocalCeilingValue(violation.occurredAt);
   const schema = markFinePaidSchema(violation.occurredAt, now);
   const form = useForm<MarkFinePaidFormInput, unknown, MarkFinePaidFormValues>({
     defaultValues: {

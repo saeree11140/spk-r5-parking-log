@@ -9,6 +9,7 @@ import {
   localDateTimeToIso,
   maskDateTimeInputValue,
   parseDateTimeInputValue,
+  toDateTimeLocalCeilingValue,
   toDateTimeLocalValue,
 } from "./date-time";
 
@@ -36,6 +37,18 @@ describe("date-time utilities", () => {
 
   it("converts an API timestamp to a Bangkok datetime-local value when the host timezone is UTC", () => {
     expect(toDateTimeLocalValue("2026-07-01T03:00:00.000Z")).toBe(
+      "2026-07-01T10:00",
+    );
+  });
+
+  it("rounds a timestamp with seconds up to the next Bangkok minute", () => {
+    expect(toDateTimeLocalCeilingValue("2026-07-01T03:00:45.123Z")).toBe(
+      "2026-07-01T10:01",
+    );
+  });
+
+  it("keeps an exact-minute timestamp unchanged when rounding", () => {
+    expect(toDateTimeLocalCeilingValue("2026-07-01T03:00:00.000Z")).toBe(
       "2026-07-01T10:00",
     );
   });

@@ -71,6 +71,16 @@ export function toDateTimeLocalValue(value: string | Date): string {
   )}:${pad(bangkokWallClock.getUTCMinutes())}`;
 }
 
+export function toDateTimeLocalCeilingValue(value: string | Date): string {
+  const date = parseDateTime(value);
+  if (!isValid(date)) return "";
+
+  const remainder = date.getTime() % 60_000;
+  const roundedDate =
+    remainder === 0 ? date : new Date(date.getTime() + 60_000 - remainder);
+  return toDateTimeLocalValue(roundedDate);
+}
+
 export function localDateTimeToIso(value: string): string {
   const date = parseLocalDateTime(value);
   if (!isValid(date)) {

@@ -31,6 +31,34 @@ const violation = makeViolation({
 });
 
 describe("MarkFinePaidModal", () => {
+  it("rounds the picker minimum up when the violation has sub-minute precision", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <MarkFinePaidModal
+        houseCode="R5-001"
+        onClose={() => undefined}
+        onSuccess={() => undefined}
+        open
+        violation={makeViolation({
+          ...violation,
+          occurredAt: "2026-07-01T03:00:45.123Z",
+        })}
+      />,
+    );
+
+    const paidAt = screen.getByLabelText("วันเวลาชำระ");
+    await user.clear(paidAt);
+    await user.type(paidAt, "010725691000");
+    await user.click(
+      screen.getByRole("button", { name: /เปิดปฏิทิน วันเวลาชำระ/ }),
+    );
+
+    expect(screen.getByRole("button", { name: "นำไปใช้" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "วันเวลาอยู่นอกช่วงที่กำหนด",
+    );
+  });
+
   it("has no amount field and rejects payment before violation", async () => {
     const user = userEvent.setup();
     renderWithQueryClient(
