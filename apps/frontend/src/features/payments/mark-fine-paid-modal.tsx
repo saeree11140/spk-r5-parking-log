@@ -3,16 +3,14 @@
 import type { ViolationResponse } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { DateTimePickerField } from "@/components/ui/date-time-picker";
 import { Modal } from "@/components/ui/modal";
 import { formatBaht } from "@/features/dashboard/dashboard-summary";
 import { parkingApi } from "@/lib/api/parking-api";
-import {
-  localDateTimeToIso,
-  toDateTimeLocalValue,
-} from "@/lib/date-time";
+import { localDateTimeToIso, toDateTimeLocalValue } from "@/lib/date-time";
 import {
   markFinePaidSchema,
   type MarkFinePaidFormInput,
@@ -36,14 +34,13 @@ export function MarkFinePaidModal({
   violation,
 }: MarkFinePaidModalProps) {
   const queryClient = useQueryClient();
-  const schema = markFinePaidSchema(violation.occurredAt, new Date());
-  const form = useForm<
-    MarkFinePaidFormInput,
-    unknown,
-    MarkFinePaidFormValues
-  >({
+  const now = new Date();
+  const maximumPaidAt = toDateTimeLocalValue(now);
+  const minimumPaidAt = toDateTimeLocalValue(violation.occurredAt);
+  const schema = markFinePaidSchema(violation.occurredAt, now);
+  const form = useForm<MarkFinePaidFormInput, unknown, MarkFinePaidFormValues>({
     defaultValues: {
-      paidAt: toDateTimeLocalValue(new Date()),
+      paidAt: maximumPaidAt,
       reference: undefined,
     },
     resolver: zodResolver(schema),
@@ -104,15 +101,24 @@ export function MarkFinePaidModal({
         <p className="confirmation-copy">
           เมื่อบันทึกว่าชำระแล้ว จะย้อนกลับไม่ได้ในระบบนี้
         </p>
-        <label className="form-field">
-          <span>วันเวลาชำระ</span>
-          <input type="datetime-local" {...form.register("paidAt")} />
-          {form.formState.errors.paidAt ? (
-            <small className="field-error">
-              {form.formState.errors.paidAt.message}
-            </small>
-          ) : null}
-        </label>
+        <Controller
+          control={form.control}
+          name="paidAt"
+          render={({ field, fieldState }) => (
+            <DateTimePickerField
+              ref={field.ref}
+              disabled={mutation.isPending}
+              error={fieldState.error?.message}
+              label="วันเวลาชำระ"
+              maxValue={maximumPaidAt}
+              minValue={minimumPaidAt}
+              name={field.name}
+              onBlur={field.onBlur}
+              onChange={field.onChange}
+              value={field.value}
+            />
+          )}
+        />
         <label className="form-field">
           <span>เลขอ้างอิง</span>
           <input

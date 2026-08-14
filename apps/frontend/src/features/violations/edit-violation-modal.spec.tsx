@@ -53,7 +53,7 @@ describe("EditViolationModal", () => {
     );
 
     expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "2026-07-01T10:00",
+      "01/07/2569 10:00",
     );
     expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("จอดกีดขวาง");
   });
@@ -79,7 +79,7 @@ describe("EditViolationModal", () => {
 
     const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
     await user.clear(occurredAt);
-    await user.type(occurredAt, "2026-07-02T11:30");
+    await user.type(occurredAt, "020725691130");
     const note = screen.getByLabelText("หมายเหตุ");
     await user.clear(note);
     await user.type(note, "  แก้ไขรายละเอียด  ");
@@ -188,7 +188,9 @@ describe("EditViolationModal", () => {
     expect(
       await screen.findByText("Violation นี้แก้ไขไม่ได้"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "แก้ไข Violation" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "แก้ไข Violation" }),
+    ).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 });

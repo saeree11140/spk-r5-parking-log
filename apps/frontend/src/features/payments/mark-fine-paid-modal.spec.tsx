@@ -49,7 +49,7 @@ describe("MarkFinePaidModal", () => {
     expect(screen.queryByLabelText("จำนวนเงิน")).not.toBeInTheDocument();
     const paidAt = screen.getByLabelText("วันเวลาชำระ");
     await user.clear(paidAt);
-    await user.type(paidAt, "2026-07-01T09:59");
+    await user.type(paidAt, "010725690959");
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
 
     expect(
@@ -78,7 +78,7 @@ describe("MarkFinePaidModal", () => {
 
     const paidAt = screen.getByLabelText("วันเวลาชำระ");
     await user.clear(paidAt);
-    await user.type(paidAt, "2026-07-01T10:00");
+    await user.type(paidAt, "010725691000");
     await user.type(screen.getByLabelText("เลขอ้างอิง"), "  receipt-001  ");
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
 
@@ -121,7 +121,7 @@ describe("MarkFinePaidModal", () => {
 
     const paidAt = screen.getByLabelText("วันเวลาชำระ");
     await user.clear(paidAt);
-    await user.type(paidAt, "2026-07-01T10:00");
+    await user.type(paidAt, "010725691000");
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
 
     expect(await screen.findByText("Fine ถูกชำระแล้ว")).toBeInTheDocument();

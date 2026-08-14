@@ -29,7 +29,7 @@ describe("CreateViolationModal", () => {
 
     const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
     await user.clear(occurredAt);
-    await user.type(occurredAt, "2999-01-01T10:00");
+    await user.type(occurredAt, "010135421000");
     await user.type(screen.getByLabelText("หมายเหตุ"), "ก".repeat(1001));
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
@@ -61,7 +61,7 @@ describe("CreateViolationModal", () => {
 
     const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
     await user.clear(occurredAt);
-    await user.type(occurredAt, "2026-07-01T10:00");
+    await user.type(occurredAt, "010725691000");
     await user.type(screen.getByLabelText("หมายเหตุ"), "  จอดกีดขวาง  ");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
@@ -98,7 +98,7 @@ describe("CreateViolationModal", () => {
 
     const occurredAt = screen.getByLabelText("วันเวลาเกิดเหตุ");
     await user.clear(occurredAt);
-    await user.type(occurredAt, "2026-07-01T10:00");
+    await user.type(occurredAt, "010725691000");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
     expect(await screen.findByText("บ้านนี้ปิดใช้งาน")).toBeInTheDocument();

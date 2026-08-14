@@ -4,11 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/api-error";
 import { parkingApi } from "@/lib/api/parking-api";
-import {
-  makeCycle,
-  makeHouseDetail,
-  makeViolation,
-} from "@/test/fixtures";
+import { makeCycle, makeHouseDetail, makeViolation } from "@/test/fixtures";
 import { renderWithQueryClient } from "@/test/render";
 
 import { HouseDetailPage } from "./house-detail-page";
@@ -93,18 +89,16 @@ describe("HouseDetailPage", () => {
     expect(
       screen.getByRole("status", { name: "กำลังโหลดรายละเอียดบ้าน" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("ยังไม่มีประวัติ Violation")).toBeInTheDocument();
+    expect(
+      await screen.findByText("ยังไม่มีประวัติ Violation"),
+    ).toBeInTheDocument();
   });
 
   it("shows a safe error and retries", async () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouse")
       .mockRejectedValueOnce(
-        new ApiError(
-          "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
-          "NETWORK_ERROR",
-          null,
-        ),
+        new ApiError("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "NETWORK_ERROR", null),
       )
       .mockResolvedValueOnce(house);
 
@@ -115,7 +109,9 @@ describe("HouseDetailPage", () => {
 
     await user.click(screen.getByRole("button", { name: "ลองใหม่" }));
 
-    expect(await screen.findByRole("heading", { name: "R5-001" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "R5-001" }),
+    ).toBeInTheDocument();
     expect(parkingApi.getHouse).toHaveBeenCalledTimes(2);
   });
 
@@ -123,7 +119,9 @@ describe("HouseDetailPage", () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
 
     renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
-    expect(await screen.findByRole("heading", { name: "R5-001" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "R5-001" }),
+    ).toBeInTheDocument();
 
     expect(screen.getByRole("link", { name: "ภาพรวม" })).toHaveAttribute(
       "href",
@@ -136,7 +134,9 @@ describe("HouseDetailPage", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
+      screen
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent),
     ).toEqual(["ประวัติ Cycle", "Cycle 2", "Cycle 1"]);
   });
 
@@ -200,10 +200,7 @@ describe("HouseDetailPage", () => {
       within(firstViolationRow as HTMLTableRowElement)
         .getAllByRole("button")
         .map((button) => button.getAttribute("aria-label")),
-    ).toEqual([
-      "แก้ไข Violation ครั้งที่ 1",
-      "ยกเลิก Violation ครั้งที่ 1",
-    ]);
+    ).toEqual(["แก้ไข Violation ครั้งที่ 1", "ยกเลิก Violation ครั้งที่ 1"]);
   });
 
   it("hides edit and cancel actions for cancelled, closed, or paid cycles", async () => {
@@ -286,7 +283,7 @@ describe("HouseDetailPage", () => {
       screen.getByRole("dialog", { name: "แก้ไข Violation" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "2026-07-01T10:00",
+      "01/07/2569 10:00",
     );
     expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("ทดสอบ");
     await user.click(screen.getByRole("button", { name: "ปิด" }));
@@ -361,7 +358,7 @@ describe("HouseDetailPage", () => {
     );
     const occurredAtInput = screen.getByLabelText("วันเวลาเกิดเหตุ");
     await user.clear(occurredAtInput);
-    await user.type(occurredAtInput, "2026-06-30T09:00");
+    await user.type(occurredAtInput, "300625690900");
     const noteInput = screen.getByLabelText("หมายเหตุ");
     await user.clear(noteInput);
     await user.type(noteInput, "แก้ลำดับแล้ว");

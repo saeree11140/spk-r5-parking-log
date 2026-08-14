@@ -64,12 +64,20 @@ export function Modal({
     firstFocusable?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
+      if (
+        !panel ||
+        !(event.target instanceof Node) ||
+        !panel.contains(event.target)
+      ) {
+        return;
+      }
+
       if (event.key === "Escape") {
         if (!pending) onClose();
         return;
       }
 
-      if (event.key !== "Tab" || !panel) return;
+      if (event.key !== "Tab") return;
       const focusable = Array.from(
         panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
       );

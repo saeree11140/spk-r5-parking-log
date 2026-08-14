@@ -160,7 +160,7 @@ export const DateTimePickerField = forwardRef<
       const nextValue = parseDateTimeInputValue(nextDisplay);
       if (!isLocalDateTimeInRange(nextValue, minValue, maxValue)) {
         setLocalError("วันเวลาอยู่นอกช่วงที่กำหนด");
-        emit("");
+        emit(nextValue);
         return;
       }
       emit(nextValue);

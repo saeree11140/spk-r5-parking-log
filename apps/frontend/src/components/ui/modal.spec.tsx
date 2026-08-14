@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderWithQueryClient } from "@/test/render";
@@ -10,9 +11,11 @@ import { Modal } from "./modal";
 function ModalHarness({
   onClose = () => undefined,
   pending = false,
+  portalChild = false,
 }: {
   onClose?: () => void;
   pending?: boolean;
+  portalChild?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -39,6 +42,12 @@ function ModalHarness({
         </label>
         <button type="button">ยืนยัน</button>
       </Modal>
+      {open && portalChild
+        ? createPortal(
+            <button type="button">ปุ่มใน Popover</button>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
@@ -50,9 +59,10 @@ describe("Modal", () => {
 
     await user.click(screen.getByRole("button", { name: "เปิด" }));
 
-    expect(
-      screen.getByRole("dialog", { name: "ทดสอบ Modal" }),
-    ).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByRole("dialog", { name: "ทดสอบ Modal" })).toHaveAttribute(
+      "aria-modal",
+      "true",
+    );
     expect(screen.getByRole("textbox", { name: "เหตุผล" })).toHaveFocus();
   });
 
@@ -78,6 +88,22 @@ describe("Modal", () => {
     renderWithQueryClient(<ModalHarness onClose={onClose} pending />);
 
     await user.click(screen.getByRole("button", { name: "เปิด" }));
+    await user.keyboard("{Escape}");
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("ignores Escape from a portaled nested overlay", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithQueryClient(<ModalHarness onClose={onClose} portalChild />);
+
+    await user.click(screen.getByRole("button", { name: "เปิด" }));
+    const popoverButton = screen.getByRole("button", {
+      name: "ปุ่มใน Popover",
+    });
+    popoverButton.focus();
     await user.keyboard("{Escape}");
 
     expect(onClose).not.toHaveBeenCalled();

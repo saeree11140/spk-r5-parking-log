@@ -6,15 +6,13 @@ import type {
 } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { DateTimePickerField } from "@/components/ui/date-time-picker";
 import { Modal } from "@/components/ui/modal";
 import { parkingApi } from "@/lib/api/parking-api";
-import {
-  localDateTimeToIso,
-  toDateTimeLocalValue,
-} from "@/lib/date-time";
+import { localDateTimeToIso, toDateTimeLocalValue } from "@/lib/date-time";
 import {
   editViolationSchema,
   type EditViolationFormInput,
@@ -38,7 +36,9 @@ export function EditViolationModal({
   violation,
 }: EditViolationModalProps) {
   const queryClient = useQueryClient();
-  const schema = editViolationSchema(new Date());
+  const now = new Date();
+  const maximumOccurredAt = toDateTimeLocalValue(now);
+  const schema = editViolationSchema(now);
   const initialOccurredAt = toDateTimeLocalValue(violation.occurredAt);
   const form = useForm<
     EditViolationFormInput,
@@ -107,15 +107,23 @@ export function EditViolationModal({
         id="edit-violation-form"
         onSubmit={submitValues}
       >
-        <label className="form-field">
-          <span>วันเวลาเกิดเหตุ</span>
-          <input type="datetime-local" {...form.register("occurredAt")} />
-          {form.formState.errors.occurredAt ? (
-            <small className="field-error">
-              {form.formState.errors.occurredAt.message}
-            </small>
-          ) : null}
-        </label>
+        <Controller
+          control={form.control}
+          name="occurredAt"
+          render={({ field, fieldState }) => (
+            <DateTimePickerField
+              ref={field.ref}
+              disabled={mutation.isPending}
+              error={fieldState.error?.message}
+              label="วันเวลาเกิดเหตุ"
+              maxValue={maximumOccurredAt}
+              name={field.name}
+              onBlur={field.onBlur}
+              onChange={field.onChange}
+              value={field.value}
+            />
+          )}
+        />
         <label className="form-field">
           <span>หมายเหตุ</span>
           <textarea
