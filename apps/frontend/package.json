@@ -13,6 +13,7 @@
     "format": "pnpm --workspace-root exec prettier --write apps/frontend"
   },
   "dependencies": {
+    "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.4.3",
     "@internationalized/date": "^3.12.3",
     "@spk-r5-parking-log/shared-types": "workspace:*",
@@ -23,6 +24,7 @@
     "next": "16.2.10",
     "react": "19.2.4",
     "react-aria-components": "^1.20.0",
+    "react-day-picker": "^10.0.1",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.83.0",
     "zod": "^4.4.3",
