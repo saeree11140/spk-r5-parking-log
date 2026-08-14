@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -156,7 +156,7 @@ describe("HouseDetailPage", () => {
     expect(within(cycle).getByText(/บันทึกผิดบ้าน/)).toBeInTheDocument();
   });
 
-  it("shows payment details and only valid actions", async () => {
+  it("shows payment details and only valid row actions", async () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
     renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
     await screen.findByRole("heading", { name: "R5-001" });
@@ -182,9 +182,31 @@ describe("HouseDetailPage", () => {
         name: "ยกเลิก Violation ครั้งที่ null",
       }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 3" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "แก้ไข Violation ครั้งที่ null",
+      }),
+    ).not.toBeInTheDocument();
+    const firstViolationRow = screen
+      .getByRole("button", { name: "แก้ไข Violation ครั้งที่ 1" })
+      .closest("tr");
+    expect(
+      within(firstViolationRow as HTMLTableRowElement)
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual([
+      "แก้ไข Violation ครั้งที่ 1",
+      "ยกเลิก Violation ครั้งที่ 1",
+    ]);
   });
 
-  it("hides cancel actions when the cycle has a paid fine", async () => {
+  it("hides edit and cancel actions for cancelled, closed, or paid cycles", async () => {
     const paidCycleHouse = makeHouseDetail({
       cycles: [
         makeCycle({
@@ -192,6 +214,11 @@ describe("HouseDetailPage", () => {
           paidFineCount: 1,
           violations: [
             makeViolation({ id: "warning", sequenceNumber: 1 }),
+            makeViolation({
+              id: "cancelled",
+              sequenceNumber: null,
+              status: "CANCELLED",
+            }),
             makeViolation({
               fine: {
                 amountBaht: 1_000,
@@ -206,6 +233,12 @@ describe("HouseDetailPage", () => {
             }),
           ],
         }),
+        makeCycle({
+          closedAt: "2026-07-03T03:00:00.000Z",
+          cycleNumber: 1,
+          status: "CLOSED",
+          violations: [makeViolation({ id: "closed", sequenceNumber: 2 })],
+        }),
       ],
     });
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(paidCycleHouse);
@@ -215,6 +248,9 @@ describe("HouseDetailPage", () => {
 
     expect(
       screen.queryByRole("button", { name: /ยกเลิก Violation/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /แก้ไข Violation/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -231,7 +267,7 @@ describe("HouseDetailPage", () => {
     expect(parkingApi.getHouse).toHaveBeenCalledTimes(2);
   });
 
-  it("opens the selected create, cancel and mark-paid dialogs", async () => {
+  it("opens the selected create, edit, cancel and mark-paid dialogs", async () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
     renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
@@ -241,6 +277,18 @@ describe("HouseDetailPage", () => {
     expect(
       screen.getByRole("dialog", { name: "เพิ่ม Violation" }),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ปิด" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 2" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "แก้ไข Violation" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
+      "2026-07-01T10:00",
+    );
+    expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("ทดสอบ");
     await user.click(screen.getByRole("button", { name: "ปิด" }));
 
     await user.click(
@@ -261,5 +309,30 @@ describe("HouseDetailPage", () => {
         name: "บันทึกชำระ Fine ครั้งที่ 3",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the edit success notice", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
+    vi.spyOn(parkingApi, "updateViolation").mockResolvedValue({} as never);
+    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await screen.findByRole("heading", { name: "R5-001" });
+
+    await user.click(
+      screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 2" }),
+    );
+    await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
+
+    expect(await screen.findByText("แก้ไข Violation แล้ว")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(parkingApi.updateViolation).toHaveBeenCalledWith(
+        "R5-001",
+        "violation-two",
+        {
+          note: "ทดสอบ",
+          occurredAt: "2026-07-01T03:00:00.000Z",
+        },
+      ),
+    );
   });
 });

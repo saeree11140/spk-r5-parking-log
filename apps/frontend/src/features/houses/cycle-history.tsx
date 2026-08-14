@@ -11,6 +11,7 @@ import { formatThaiDateTime } from "@/lib/date-time";
 interface CycleHistoryProps {
   cycles: CycleResponse[];
   onCancelViolation?: (violation: ViolationResponse) => void;
+  onEditViolation?: (violation: ViolationResponse) => void;
   onMarkPaid?: (violation: ViolationResponse) => void;
 }
 
@@ -45,6 +46,7 @@ function orderViolations(
 export function CycleHistory({
   cycles,
   onCancelViolation,
+  onEditViolation,
   onMarkPaid,
 }: CycleHistoryProps) {
   const sortedCycles = [...cycles].sort(
@@ -111,6 +113,10 @@ export function CycleHistory({
                     const canCancel =
                       cancellationAllowed &&
                       violation.status !== "CANCELLED";
+                    const canEdit =
+                      cycle.status === "OPEN" &&
+                      cycle.paidFineCount === 0 &&
+                      violation.status !== "CANCELLED";
                     const canMarkPaid =
                       cycle.status === "OPEN" &&
                       violation.fine?.status === "PENDING";
@@ -161,6 +167,15 @@ export function CycleHistory({
                                 variant="primary"
                               >
                                 บันทึกชำระ
+                              </Button>
+                            ) : null}
+                            {canEdit ? (
+                              <Button
+                                aria-label={`แก้ไข Violation ครั้งที่ ${violation.sequenceNumber}`}
+                                onClick={() => onEditViolation?.(violation)}
+                                variant="ghost"
+                              >
+                                แก้ไข
                               </Button>
                             ) : null}
                             {canCancel ? (
