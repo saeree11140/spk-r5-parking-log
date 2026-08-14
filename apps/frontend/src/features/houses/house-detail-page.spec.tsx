@@ -311,28 +311,87 @@ describe("HouseDetailPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the edit success notice", async () => {
+  it("refetches and renders the reordered note and fine state after editing", async () => {
     const user = userEvent.setup();
-    vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
+    const updatedHouse = makeHouseDetail({
+      ...house,
+      cycles: [
+        house.cycles[0]!,
+        makeCycle({
+          ...house.cycles[1],
+          violations: [
+            makeViolation({
+              fine: { ...pendingFine, amountBaht: 0, status: "CANCELLED" },
+              id: "violation-three",
+              note: "แก้ลำดับแล้ว",
+              occurredAt: "2026-06-30T02:00:00.000Z",
+              sequenceNumber: 1,
+              status: "WARNING",
+            }),
+            makeViolation({
+              id: "violation-one",
+              sequenceNumber: 2,
+            }),
+            makeViolation({
+              fine: { ...pendingFine, id: "fine-resequenced" },
+              id: "violation-two",
+              sequenceNumber: 3,
+              status: "PENDING_FINE",
+            }),
+            makeViolation({
+              cancellationReason: "บันทึกผิดบ้าน",
+              cancelledAt: "2026-07-02T03:00:00.000Z",
+              id: "violation-cancelled",
+              sequenceNumber: null,
+              status: "CANCELLED",
+            }),
+          ],
+        }),
+      ],
+    });
+    vi.spyOn(parkingApi, "getHouse")
+      .mockResolvedValueOnce(house)
+      .mockResolvedValueOnce(updatedHouse);
     vi.spyOn(parkingApi, "updateViolation").mockResolvedValue({} as never);
     renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
     await screen.findByRole("heading", { name: "R5-001" });
 
     await user.click(
-      screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 2" }),
+      screen.getByRole("button", { name: "แก้ไข Violation ครั้งที่ 3" }),
     );
+    const occurredAtInput = screen.getByLabelText("วันเวลาเกิดเหตุ");
+    await user.clear(occurredAtInput);
+    await user.type(occurredAtInput, "2026-06-30T09:00");
+    const noteInput = screen.getByLabelText("หมายเหตุ");
+    await user.clear(noteInput);
+    await user.type(noteInput, "แก้ลำดับแล้ว");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
     expect(await screen.findByText("แก้ไข Violation แล้ว")).toBeInTheDocument();
     await waitFor(() =>
       expect(parkingApi.updateViolation).toHaveBeenCalledWith(
         "R5-001",
-        "violation-two",
+        "violation-three",
         {
-          note: "ทดสอบ",
-          occurredAt: "2026-07-01T03:00:00.000Z",
+          note: "แก้ลำดับแล้ว",
+          occurredAt: "2026-06-30T02:00:00.000Z",
         },
       ),
     );
+    expect(parkingApi.getHouse).toHaveBeenCalledTimes(2);
+
+    const cycle = screen.getByRole("region", { name: "Cycle 2" });
+    const rows = within(cycle).getAllByRole("row").slice(1);
+    expect(rows.map((row) => row.dataset.violationId)).toEqual([
+      "violation-three",
+      "violation-one",
+      "violation-two",
+      "violation-cancelled",
+    ]);
+    expect(within(rows[0]!).getByText("แก้ลำดับแล้ว")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("แจ้งเตือน")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("฿0")).toBeInTheDocument();
+    expect(within(rows[2]!).getByText("รอชำระ Fine")).toBeInTheDocument();
+    expect(within(rows[2]!).getByText("฿1,000")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,14 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { ApiError } from "@/lib/api/api-error";
 import { parkingApi } from "@/lib/api/parking-api";
@@ -10,7 +18,16 @@ import { createTestQueryClient, renderWithQueryClient } from "@/test/render";
 
 import { EditViolationModal } from "./edit-violation-modal";
 
-process.env.TZ = "Asia/Bangkok";
+const originalTimeZone = process.env.TZ;
+
+beforeAll(() => {
+  process.env.TZ = "UTC";
+});
+
+afterAll(() => {
+  if (originalTimeZone === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTimeZone;
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -111,6 +128,40 @@ describe("EditViolationModal", () => {
         {
           note: null,
           occurredAt: "2026-07-01T03:00:00.000Z",
+        },
+      ),
+    );
+  });
+
+  it("preserves the exact original instant when only the note changes", async () => {
+    const user = userEvent.setup();
+    const preciseViolation = makeViolation({
+      ...violation,
+      occurredAt: "2026-07-01T03:00:45.123Z",
+    });
+    vi.spyOn(parkingApi, "updateViolation").mockResolvedValue({} as never);
+    renderWithQueryClient(
+      <EditViolationModal
+        houseCode="R5-001"
+        onClose={() => undefined}
+        onSuccess={() => undefined}
+        open
+        violation={preciseViolation}
+      />,
+    );
+
+    const note = screen.getByLabelText("หมายเหตุ");
+    await user.clear(note);
+    await user.type(note, "แก้เฉพาะหมายเหตุ");
+    await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
+
+    await waitFor(() =>
+      expect(parkingApi.updateViolation).toHaveBeenCalledWith(
+        "R5-001",
+        "400815ca-caf9-4106-86f2-99895fa014fe",
+        {
+          note: "แก้เฉพาะหมายเหตุ",
+          occurredAt: "2026-07-01T03:00:45.123Z",
         },
       ),
     );

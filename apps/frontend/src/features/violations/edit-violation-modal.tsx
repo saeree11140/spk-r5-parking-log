@@ -39,6 +39,7 @@ export function EditViolationModal({
 }: EditViolationModalProps) {
   const queryClient = useQueryClient();
   const schema = editViolationSchema(new Date());
+  const initialOccurredAt = toDateTimeLocalValue(violation.occurredAt);
   const form = useForm<
     EditViolationFormInput,
     unknown,
@@ -46,7 +47,7 @@ export function EditViolationModal({
   >({
     defaultValues: {
       note: violation.note ?? "",
-      occurredAt: toDateTimeLocalValue(new Date(violation.occurredAt)),
+      occurredAt: initialOccurredAt,
     },
     resolver: zodResolver(schema),
   });
@@ -71,7 +72,10 @@ export function EditViolationModal({
   const submitValues = form.handleSubmit((values) => {
     mutation.mutate({
       note: values.note ?? null,
-      occurredAt: localDateTimeToIso(values.occurredAt),
+      occurredAt:
+        values.occurredAt === initialOccurredAt
+          ? violation.occurredAt
+          : localDateTimeToIso(values.occurredAt),
     });
   });
 

@@ -1,17 +1,37 @@
-import {
-  format,
-  isAfter,
-  isBefore,
-  isValid,
-  parse,
-  parseISO,
-} from "date-fns";
-import { th } from "date-fns/locale";
+import { isValid, parseISO } from "date-fns";
 
-const LOCAL_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm";
+const LOCAL_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+const BANGKOK_OFFSET_MILLISECONDS = 7 * 60 * 60 * 1_000;
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
 
 function parseLocalDateTime(value: string): Date {
-  return parse(value, LOCAL_DATE_TIME_FORMAT, new Date());
+  const match = LOCAL_DATE_TIME_PATTERN.exec(value);
+  if (!match) return new Date(Number.NaN);
+
+  const [, yearValue, monthValue, dayValue, hourValue, minuteValue] = match;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  const hour = Number(hourValue);
+  const minute = Number(minuteValue);
+  const bangkokWallClock = new Date(0);
+  bangkokWallClock.setUTCFullYear(year, month - 1, day);
+  bangkokWallClock.setUTCHours(hour, minute, 0, 0);
+
+  if (
+    bangkokWallClock.getUTCFullYear() !== year ||
+    bangkokWallClock.getUTCMonth() !== month - 1 ||
+    bangkokWallClock.getUTCDate() !== day ||
+    bangkokWallClock.getUTCHours() !== hour ||
+    bangkokWallClock.getUTCMinutes() !== minute
+  ) {
+    return new Date(Number.NaN);
+  }
+
+  return new Date(bangkokWallClock.getTime() - BANGKOK_OFFSET_MILLISECONDS);
 }
 
 function parseDateTime(value: string | Date): Date {
@@ -24,17 +44,29 @@ export function formatThaiDateTime(value: string | Date | null): string {
   const date = parseDateTime(value);
   if (!isValid(date)) return "—";
 
-  const buddhistYear = date.getFullYear() + 543;
-  return `${format(date, "dd/MM", { locale: th })}/${buddhistYear} ${format(
-    date,
-    "HH:mm",
-    { locale: th },
+  const bangkokWallClock = new Date(
+    date.getTime() + BANGKOK_OFFSET_MILLISECONDS,
+  );
+  const buddhistYear = bangkokWallClock.getUTCFullYear() + 543;
+  return `${pad(bangkokWallClock.getUTCDate())}/${pad(
+    bangkokWallClock.getUTCMonth() + 1,
+  )}/${buddhistYear} ${pad(bangkokWallClock.getUTCHours())}:${pad(
+    bangkokWallClock.getUTCMinutes(),
   )}`;
 }
 
 export function toDateTimeLocalValue(value: string | Date): string {
   const date = parseDateTime(value);
-  return isValid(date) ? format(date, LOCAL_DATE_TIME_FORMAT) : "";
+  if (!isValid(date)) return "";
+
+  const bangkokWallClock = new Date(
+    date.getTime() + BANGKOK_OFFSET_MILLISECONDS,
+  );
+  return `${bangkokWallClock.getUTCFullYear()}-${pad(
+    bangkokWallClock.getUTCMonth() + 1,
+  )}-${pad(bangkokWallClock.getUTCDate())}T${pad(
+    bangkokWallClock.getUTCHours(),
+  )}:${pad(bangkokWallClock.getUTCMinutes())}`;
 }
 
 export function localDateTimeToIso(value: string): string {
@@ -47,7 +79,7 @@ export function localDateTimeToIso(value: string): string {
 
 export function isFutureDateTime(value: string, now: Date): boolean {
   const date = parseLocalDateTime(value);
-  return isValid(date) && isAfter(date, now);
+  return isValid(date) && date.getTime() > now.getTime();
 }
 
 export function isBeforeViolation(
@@ -59,6 +91,6 @@ export function isBeforeViolation(
   return (
     isValid(paidAt) &&
     isValid(violationAt) &&
-    isBefore(paidAt, violationAt)
+    paidAt.getTime() < violationAt.getTime()
   );
 }

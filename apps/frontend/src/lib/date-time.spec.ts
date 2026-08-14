@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   formatThaiDateTime,
@@ -8,10 +8,19 @@ import {
   toDateTimeLocalValue,
 } from "./date-time";
 
-process.env.TZ = "Asia/Bangkok";
+const originalTimeZone = process.env.TZ;
+
+beforeAll(() => {
+  process.env.TZ = "UTC";
+});
+
+afterAll(() => {
+  if (originalTimeZone === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTimeZone;
+});
 
 describe("date-time utilities", () => {
-  it("formats an API timestamp as Thai local Buddhist date and time", () => {
+  it("formats an API timestamp in Bangkok when the host timezone is UTC", () => {
     expect(formatThaiDateTime("2026-07-01T03:00:00.000Z")).toBe(
       "01/07/2569 10:00",
     );
@@ -21,13 +30,13 @@ describe("date-time utilities", () => {
     expect(formatThaiDateTime("invalid")).toBe("—");
   });
 
-  it("converts an API timestamp to a datetime-local value", () => {
+  it("converts an API timestamp to a Bangkok datetime-local value when the host timezone is UTC", () => {
     expect(toDateTimeLocalValue("2026-07-01T03:00:00.000Z")).toBe(
       "2026-07-01T10:00",
     );
   });
 
-  it("converts a local Bangkok datetime to ISO", () => {
+  it("converts a Bangkok datetime-local value to ISO when the host timezone is UTC", () => {
     expect(localDateTimeToIso("2026-07-01T10:00")).toBe(
       "2026-07-01T03:00:00.000Z",
     );

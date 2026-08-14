@@ -216,12 +216,11 @@ export class ViolationsService {
         );
       }
 
-      const hasNote = Object.prototype.hasOwnProperty.call(dto, 'note');
       const updated = await tx.parkingViolation.update({
         where: { id: violation.id },
         data: {
           occurredAt,
-          ...(hasNote ? { note: dto.note ?? null } : {}),
+          ...(dto.note !== undefined ? { note: dto.note ?? null } : {}),
         },
       });
 

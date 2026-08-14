@@ -285,6 +285,58 @@ describe('Core parking API (e2e)', () => {
         fine: { status: 'PENDING', amountBaht: 1000 },
       },
     ]);
+
+    const cancelledFineId = violations[2].violation.fine?.id;
+    expect(cancelledFineId).toBeDefined();
+    if (!cancelledFineId) throw new Error('Expected original fine');
+    const cancelledFineAudits = await prisma.auditLog.findMany({
+      where: {
+        action: 'UPDATE',
+        entityId: cancelledFineId,
+        entityType: 'Fine',
+      },
+    });
+    expect(cancelledFineAudits).toEqual([
+      expect.objectContaining({
+        after: { amountBaht: 0, status: 'CANCELLED' },
+        before: { amountBaht: 1000, status: 'PENDING' },
+      }),
+    ]);
+
+    const pendingFine = detail.cycles[0]?.violations.find(
+      ({ id }) => id === violations[1].violation.id,
+    )?.fine;
+    expect(pendingFine).not.toBeNull();
+    if (!pendingFine) throw new Error('Expected replacement pending fine');
+    const pendingFineAudits = await prisma.auditLog.findMany({
+      where: {
+        action: 'CREATE',
+        entityId: pendingFine.id,
+        entityType: 'Fine',
+      },
+    });
+    expect(pendingFineAudits).toEqual([
+      expect.objectContaining({
+        after: { amountBaht: 1000, status: 'PENDING' },
+        before: null,
+      }),
+    ]);
+  });
+
+  it('preserves an existing note when the HTTP patch omits note', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[0] })
+      .expect(200);
+
+    expect(bodyAs<MutationBody>(response).violation.note).toBe('violation 1');
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(detail.cycles[0]?.violations[0]?.note).toBe('violation 1');
   });
 
   it('clears an existing note when an edit supplies a blank note', async () => {

@@ -1,6 +1,9 @@
+import { plainToInstance } from 'class-transformer';
+
 import { SYSTEM_ACTOR } from '../audit/audit-log';
 import type { PrismaService } from '../database/prisma.service';
 import { DomainError } from '../common/domain-error';
+import { UpdateViolationDto } from './update-violation.dto';
 import { ViolationsService } from './violations.service';
 
 const occurredAt = '2026-07-18T10:00:00+07:00';
@@ -558,19 +561,15 @@ describe('ViolationsService.update', () => {
     };
     const service = new ViolationsService(prismaFor(tx));
 
-    await service.update(
-      'R5-001',
-      original.id,
-      { occurredAt: '2026-07-19T10:00:00+07:00' },
-      SYSTEM_ACTOR,
-    );
+    const dto = plainToInstance(UpdateViolationDto, {
+      occurredAt: '2026-07-19T10:00:00+07:00',
+    });
 
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // Jest's asymmetric matcher is typed as any.
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: { occurredAt: expect.any(Date) },
-      }) as unknown,
-    );
+    await service.update('R5-001', original.id, dto, SYSTEM_ACTOR);
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: original.id },
+      data: { occurredAt: new Date('2026-07-19T03:00:00Z') },
+    });
   });
 });
