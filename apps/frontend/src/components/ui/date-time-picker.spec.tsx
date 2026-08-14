@@ -37,170 +37,66 @@ function PickerHarness({
 }
 
 describe("DateTimePickerField", () => {
-  it("does not inject a hidden native datetime-local input", () => {
+  it("renders a Buddhist date button beside a native 24-hour time input", () => {
     renderWithQueryClient(<PickerHarness />);
 
+    expect(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    ).toHaveTextContent("14/08/2569");
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
+      "17:30",
+    );
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveAttribute(
+      "type",
+      "time",
+    );
     expect(
       document.querySelector('input[type="datetime-local"]'),
     ).not.toBeInTheDocument();
   });
 
-  it("displays a normalized value using day month Buddhist year and 24-hour time", () => {
-    renderWithQueryClient(<PickerHarness />);
-
-    expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "14/08/2569 17:30",
-    );
-  });
-
-  it("masks manual digits and emits the normalized Gregorian value", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
-    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
-
-    await user.clear(input);
-    await user.type(input, "150825691845");
-
-    expect(input).toHaveValue("15/08/2569 18:45");
-    expect(onChange).toHaveBeenLastCalledWith("2026-08-15T18:45");
-  });
-
-  it("emits an empty form value while manual input is incomplete", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
-    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
-
-    await user.clear(input);
-    await user.type(input, "1508");
-
-    expect(input).toHaveValue("15/08");
-    expect(onChange).toHaveBeenLastCalledWith("");
-  });
-
-  it("marks a completed value outside the allowed range as invalid", async () => {
-    const user = userEvent.setup();
-    renderWithQueryClient(<PickerHarness maxValue="2026-08-14T17:30" />);
-    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
-
-    await user.clear(input);
-    await user.type(input, "150825691730");
-    fireEvent.blur(input);
-
-    expect(input).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByText("วันเวลาอยู่นอกช่วงที่กำหนด")).toBeInTheDocument();
-  });
-
-  it("keeps popover time changes as a draft until Apply", async () => {
+  it("commits a selected calendar date immediately and closes the popover", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
 
     await user.click(
-      screen.getByRole("button", {
-        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
-      }),
-    );
-    const hour = screen.getByRole("spinbutton", { name: "ชั่วโมง" });
-    const minute = screen.getByRole("spinbutton", { name: "นาที" });
-    await user.clear(hour);
-    await user.type(hour, "18");
-    await user.clear(minute);
-    await user.type(minute, "45");
-
-    expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "14/08/2569 17:30",
-    );
-
-    await user.click(screen.getByRole("button", { name: "นำไปใช้" }));
-
-    expect(onChange).toHaveBeenLastCalledWith("2026-08-14T18:45");
-    expect(screen.getByLabelText("วันเวลาเกิดเหตุ")).toHaveValue(
-      "14/08/2569 18:45",
-    );
-  });
-
-  it("commits a calendar date only after Apply and closes the popover", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
-      }),
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
     );
     await user.click(
       screen.getByRole("button", { name: /15 สิงหาคม 2569/ }),
     );
 
-    expect(onChange).not.toHaveBeenLastCalledWith("2026-08-15T17:30");
-    await user.click(screen.getByRole("button", { name: "นำไปใช้" }));
-
     expect(onChange).toHaveBeenLastCalledWith("2026-08-15T17:30");
     expect(
-      screen.queryByRole("dialog", { name: "เลือกวันเวลา" }),
+      screen.queryByRole("dialog", { name: "เลือกวันที่" }),
     ).not.toBeInTheDocument();
   });
 
-  it("discards a draft on outside interaction and restores input focus", async () => {
-    const user = userEvent.setup();
-    renderWithQueryClient(
-      <>
-        <PickerHarness />
-        <button type="button">ภายนอก</button>
-      </>,
-    );
-    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
+  it("commits a native time change immediately while preserving the date", () => {
+    const onChange = vi.fn();
+    renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
 
-    await user.click(
-      screen.getByRole("button", {
-        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
-      }),
-    );
-    await user.click(screen.getByRole("button", { name: "ภายนอก" }));
+    fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
+      target: { value: "18:45" },
+    });
 
-    expect(
-      screen.queryByRole("dialog", { name: "เลือกวันเวลา" }),
-    ).not.toBeInTheDocument();
-    expect(input).toHaveFocus();
-    expect(input).toHaveValue("14/08/2569 17:30");
+    expect(onChange).toHaveBeenLastCalledWith("2026-08-14T18:45");
   });
 
-  it("discards a popover draft with Cancel", async () => {
+  it("does not render Apply or Cancel actions in the calendar", async () => {
     const user = userEvent.setup();
     renderWithQueryClient(<PickerHarness />);
-    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
 
     await user.click(
-      screen.getByRole("button", {
-        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
-      }),
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
     );
-    const hour = screen.getByRole("spinbutton", { name: "ชั่วโมง" });
-    await user.clear(hour);
-    await user.type(hour, "18");
-    await user.click(screen.getByRole("button", { name: "ยกเลิก" }));
-
-    expect(input).toHaveValue("14/08/2569 17:30");
-  });
-
-  it("closes the popover with Escape and restores focus to the input", async () => {
-    const user = userEvent.setup();
-    renderWithQueryClient(<PickerHarness />);
-    const input = screen.getByLabelText("วันเวลาเกิดเหตุ");
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /^เปิดปฏิทิน วันเวลาเกิดเหตุ/,
-      }),
-    );
-    await user.keyboard("{Escape}");
 
     expect(
-      screen.queryByRole("dialog", { name: "เลือกวันเวลา" }),
+      screen.queryByRole("button", { name: "นำไปใช้" }),
     ).not.toBeInTheDocument();
-    expect(input).toHaveFocus();
+    expect(
+      screen.queryByRole("button", { name: "ยกเลิก" }),
+    ).not.toBeInTheDocument();
   });
 });

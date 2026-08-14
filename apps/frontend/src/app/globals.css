@@ -812,46 +812,46 @@ tbody tr:hover {
   box-shadow: 0 0 0 3px rgb(23 92 211 / 12%);
 }
 
-.date-time-picker__input-group {
-  position: relative;
-  display: flex;
+.date-time-picker__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  gap: 12px;
   width: 100%;
 }
 
-.form-field .date-time-picker__input-group input {
-  padding-right: 46px;
-}
-
-.date-time-picker__trigger,
+.date-time-picker__date-trigger,
 .date-time-picker__nav {
-  display: inline-grid;
   color: var(--muted);
   cursor: pointer;
-  border: 0;
-  background: transparent;
-  place-items: center;
 }
 
-.date-time-picker__trigger {
-  position: absolute;
-  top: 1px;
-  right: 1px;
-  bottom: 1px;
-  width: 42px;
-  border-left: 1px solid var(--border);
-  border-radius: 0 8px 8px 0;
+.date-time-picker__date-trigger {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: space-between;
+  color: var(--ink);
+  font-weight: 400;
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
-.date-time-picker__trigger:hover,
+.date-time-picker__date-trigger:hover,
 .date-time-picker__nav:hover {
   color: var(--road-blue);
   background: rgb(23 92 211 / 7%);
 }
 
-.date-time-picker__trigger:disabled,
-.date-time-picker__trigger[data-disabled] {
+.date-time-picker__date-trigger:disabled,
+.date-time-picker__date-trigger[data-disabled] {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.date-time-picker__date-trigger:focus-visible {
+  border-color: var(--road-blue);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgb(23 92 211 / 12%);
 }
 
 .date-time-picker__positioner {
@@ -860,10 +860,7 @@ tbody tr:hover {
 }
 
 .date-time-picker__popover {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
   width: min(344px, calc(100vw - 32px));
-  max-height: min(620px, calc(100vh - 32px));
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -880,53 +877,19 @@ tbody tr:hover {
   animation: fade-out 100ms ease-in;
 }
 
-.date-time-picker__scroll {
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
 .date-time-picker__calendar {
   width: 100%;
   padding: 12px 18px 18px;
 }
 
-.date-time-picker__calendar-tools,
-.date-time-picker__time,
-.date-time-picker__actions {
-  display: flex;
-  align-items: center;
-}
-
-.date-time-picker__calendar-tools {
-  justify-content: space-between;
-}
-
 .date-time-picker__nav {
+  display: inline-grid;
   width: 34px;
   height: 34px;
+  border: 0;
   border-radius: 8px;
-}
-
-.date-time-picker__calendar-tools {
-  gap: 12px;
-  min-height: 34px;
-  padding: 14px 18px 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.date-time-picker__today {
-  min-height: 34px;
-  padding: 4px 10px;
-  color: var(--road-blue);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.date-time-picker__today:hover {
-  background: rgb(23 92 211 / 7%);
+  background: transparent;
+  place-items: center;
 }
 
 .date-time-picker__months,
@@ -1020,53 +983,11 @@ tbody tr:hover {
   background: transparent;
 }
 
-.date-time-picker__time {
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 18px;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
-}
-
-.date-time-picker__time label {
-  display: grid;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.date-time-picker__time input {
-  width: 72px;
-  min-height: 40px;
-  padding: 7px 8px;
-  color: var(--ink);
-  text-align: center;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.date-time-picker__draft-error {
-  padding: 0 18px 12px;
-  margin: 0;
-  color: var(--danger);
-  font-size: 12px;
-  text-align: center;
-}
-
-.date-time-picker__actions {
-  gap: 12px;
-  padding: 14px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.date-time-picker__actions .button {
-  flex: 1;
-}
-
 @media (max-width: 420px) {
+  .date-time-picker__controls {
+    grid-template-columns: 1fr;
+  }
+
   .date-time-picker__calendar {
     padding: 14px;
   }
