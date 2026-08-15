@@ -54,7 +54,7 @@ describe("MarkFinePaidModal", () => {
       screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
     );
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาชำระ"), {
-      target: { value: "10:00" },
+      target: { value: "10:00:45" },
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -89,7 +89,7 @@ describe("MarkFinePaidModal", () => {
       screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
     );
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาชำระ"), {
-      target: { value: "09:59" },
+      target: { value: "09:59:59" },
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
       "วันเวลาอยู่นอกช่วงที่กำหนด",
@@ -126,7 +126,7 @@ describe("MarkFinePaidModal", () => {
       screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
     );
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาชำระ"), {
-      target: { value: "10:00" },
+      target: { value: "10:00:30" },
     });
     await user.type(screen.getByLabelText("เลขอ้างอิง"), "  receipt-001  ");
     await user.click(screen.getByRole("button", { name: "ยืนยันว่าชำระแล้ว" }));
@@ -136,7 +136,7 @@ describe("MarkFinePaidModal", () => {
         "R5-001",
         "400815ca-caf9-4106-86f2-99895fa014fe",
         {
-          paidAt: "2026-07-01T03:00:00.000Z",
+          paidAt: "2026-07-01T03:00:30.000Z",
           reference: "receipt-001",
         },
       ),

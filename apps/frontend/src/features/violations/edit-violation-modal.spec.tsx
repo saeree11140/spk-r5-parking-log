@@ -56,7 +56,7 @@ describe("EditViolationModal", () => {
       screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
     ).toHaveTextContent("01/07/2569");
     expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
-      "10:00",
+      "10:00:00",
     );
     expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("จอดกีดขวาง");
   });
@@ -87,7 +87,7 @@ describe("EditViolationModal", () => {
       screen.getByRole("button", { name: /ที่ 2 กรกฎาคม 2569$/ }),
     );
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
-      target: { value: "11:30" },
+      target: { value: "11:30:15" },
     });
     const note = screen.getByLabelText("หมายเหตุ");
     await user.clear(note);
@@ -100,7 +100,7 @@ describe("EditViolationModal", () => {
         "400815ca-caf9-4106-86f2-99895fa014fe",
         {
           note: "แก้ไขรายละเอียด",
-          occurredAt: "2026-07-02T04:30:00.000Z",
+          occurredAt: "2026-07-02T04:30:15.000Z",
         },
       ),
     );

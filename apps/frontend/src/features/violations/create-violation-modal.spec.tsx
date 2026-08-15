@@ -28,7 +28,7 @@ describe("CreateViolationModal", () => {
     );
 
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
-      target: { value: "23:59" },
+      target: { value: "23:59:59" },
     });
     expect(screen.getByRole("alert")).toHaveTextContent(
       "วันเวลาอยู่นอกช่วงที่กำหนด",
@@ -67,7 +67,7 @@ describe("CreateViolationModal", () => {
       screen.getByRole("button", { name: /ที่ 1 กรกฎาคม 2569$/ }),
     );
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
-      target: { value: "10:00" },
+      target: { value: "10:00:45" },
     });
     await user.type(screen.getByLabelText("หมายเหตุ"), "  จอดกีดขวาง  ");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
@@ -75,7 +75,7 @@ describe("CreateViolationModal", () => {
     await waitFor(() =>
       expect(parkingApi.createViolation).toHaveBeenCalledWith("R5-001", {
         note: "จอดกีดขวาง",
-        occurredAt: "2026-07-01T03:00:00.000Z",
+        occurredAt: "2026-07-01T03:00:45.000Z",
       }),
     );
     expect(queryClient.getQueryState(queryKeys.houses)?.isInvalidated).toBe(

@@ -286,7 +286,7 @@ describe("HouseDetailPage", () => {
       screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
     ).toHaveTextContent("01/07/2569");
     expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
-      "10:00",
+      "10:00:00",
     );
     expect(screen.getByLabelText("หมายเหตุ")).toHaveValue("ทดสอบ");
     await user.click(screen.getByRole("button", { name: "ปิด" }));
@@ -324,7 +324,7 @@ describe("HouseDetailPage", () => {
               fine: { ...pendingFine, amountBaht: 0, status: "CANCELLED" },
               id: "violation-three",
               note: "แก้ลำดับแล้ว",
-              occurredAt: "2026-06-30T02:00:00.000Z",
+              occurredAt: "2026-06-30T02:00:30.000Z",
               sequenceNumber: 1,
               status: "WARNING",
             }),
@@ -367,7 +367,7 @@ describe("HouseDetailPage", () => {
       screen.getByRole("button", { name: /ที่ 30 มิถุนายน 2569$/ }),
     );
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
-      target: { value: "09:00" },
+      target: { value: "09:00:30" },
     });
     const noteInput = screen.getByLabelText("หมายเหตุ");
     await user.clear(noteInput);
@@ -381,7 +381,7 @@ describe("HouseDetailPage", () => {
         "violation-three",
         {
           note: "แก้ลำดับแล้ว",
-          occurredAt: "2026-06-30T02:00:00.000Z",
+          occurredAt: "2026-06-30T02:00:30.000Z",
         },
       ),
     );
