@@ -722,13 +722,13 @@ tbody tr:hover {
 .cycle-header p {
   margin-top: 6px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .cycle-totals {
   display: flex;
-  gap: 32px;
-  padding: 14px 20px;
+  gap: 40px;
+  padding: 18px 20px;
   margin: 0;
   background: #f9fafb;
   border-bottom: 1px solid var(--border);
@@ -742,14 +742,29 @@ tbody tr:hover {
 
 .cycle-totals dt {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .cycle-totals dd {
   margin: 0;
   font:
-    600 16px/1 var(--font-system),
+    600 20px/1 var(--font-system),
     sans-serif;
+}
+
+.cycle-table th,
+.cycle-table td {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.cycle-table th {
+  font-size: 14px;
+}
+
+.cycle-table td {
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .cancellation-reason,

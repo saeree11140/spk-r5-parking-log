@@ -96,7 +96,7 @@ export function CycleHistory({
               </div>
             </dl>
             <div className="table-scroll">
-              <table>
+              <table className="cycle-table">
                 <thead>
                   <tr>
                     <th scope="col">ครั้งที่</th>

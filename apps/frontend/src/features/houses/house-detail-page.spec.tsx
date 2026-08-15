@@ -138,6 +138,11 @@ describe("HouseDetailPage", () => {
         .getAllByRole("heading", { level: 2 })
         .map((heading) => heading.textContent),
     ).toEqual(["ประวัติ Cycle", "Cycle 2", "Cycle 1"]);
+    expect(
+      within(screen.getByRole("region", { name: "Cycle 2" })).getByRole(
+        "table",
+      ),
+    ).toHaveClass("cycle-table");
   });
 
   it("orders active violations by sequence and cancelled records last", async () => {
