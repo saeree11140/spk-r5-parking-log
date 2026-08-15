@@ -167,6 +167,35 @@ describe('Authentication and authorization (e2e)', () => {
     expect(bodyAs<{ code: string }>(response).code).toBe('CSRF_INVALID');
   });
 
+  it('renews the CSRF cookie for an authenticated session', async () => {
+    const staff = await harness.createUser('STAFF');
+    const auth = await harness.login(staff);
+
+    const response = await auth.agent.get('/api/auth/csrf').expect(200);
+    const setCookieHeader: unknown = response.headers['set-cookie'];
+    const setCookies = Array.isArray(setCookieHeader)
+      ? setCookieHeader.filter(
+          (value): value is string => typeof value === 'string',
+        )
+      : typeof setCookieHeader === 'string'
+        ? [setCookieHeader]
+        : [];
+    const csrfCookie =
+      setCookies.find((cookie) => cookie.startsWith('spk_r5_csrf=')) ?? '';
+    const renewedCsrf = decodeURIComponent(
+      csrfCookie.split(';', 1)[0]?.split('=', 2)[1] ?? '',
+    );
+
+    expect(renewedCsrf).not.toBe('');
+    expect(renewedCsrf).not.toBe(auth.csrf);
+    await auth.agent
+      .post('/api/houses/R5-163/violations')
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', renewedCsrf)
+      .send({ occurredAt: 'not-a-date' })
+      .expect(400);
+  });
+
   it('revokes the current session on logout', async () => {
     const staff = await harness.createUser('STAFF');
     const auth = await harness.login(staff);

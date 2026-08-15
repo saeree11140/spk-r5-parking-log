@@ -15,6 +15,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { TokenService } from './token.service';
 
 @SkipThrottle({ auth: true })
 @Controller('auth')
@@ -22,6 +23,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly cookieService: AuthCookieService,
+    private readonly tokenService: TokenService,
   ) {}
 
   @Public()
@@ -90,6 +92,21 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser): AuthResponse {
     return { user: this.authService.me(user) };
+  }
+
+  @AllowPasswordChange()
+  @Get('csrf')
+  csrf(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
+  ): LogoutResponse {
+    this.cookieService.setCsrfCookie(
+      response,
+      this.tokenService.createCsrfToken(),
+      user.sessionExpiresAt,
+    );
+
+    return { success: true };
   }
 
   @AllowPasswordChange()

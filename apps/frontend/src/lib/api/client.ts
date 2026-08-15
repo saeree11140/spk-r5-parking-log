@@ -6,12 +6,14 @@ import { readCsrfCookie } from "./csrf";
 
 interface RetriableRequestConfig extends InternalAxiosRequestConfig {
   _authRetried?: boolean;
+  _csrfRetried?: boolean;
 }
 
 type AuthExpiredHandler = () => void;
 
 const MUTATION_METHODS = new Set(["post", "patch", "put", "delete"]);
 let refreshPromise: Promise<void> | null = null;
+let csrfRecoveryPromise: Promise<void> | null = null;
 let authExpiredHandler: AuthExpiredHandler | null = null;
 
 function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
@@ -104,6 +106,23 @@ function shouldRefresh(error: unknown): error is AxiosError<ApiErrorResponse> {
   );
 }
 
+function shouldRecoverCsrf(
+  error: unknown,
+): error is AxiosError<ApiErrorResponse> {
+  if (!(error instanceof AxiosError)) return false;
+
+  const config = error.config as RetriableRequestConfig | undefined;
+  return (
+    error.response?.status === 403 &&
+    error.response.data?.code === "CSRF_INVALID" &&
+    !config?._csrfRetried
+  );
+}
+
+async function recoverCsrf(): Promise<void> {
+  await apiClient.get("/auth/csrf");
+}
+
 export async function runWithAuthRefreshLock(
   operation: () => Promise<void>,
 ): Promise<void> {
@@ -127,6 +146,24 @@ async function refreshAuthentication(): Promise<void> {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
+    if (shouldRecoverCsrf(error)) {
+      const config = error.config as RetriableRequestConfig;
+      config._csrfRetried = true;
+
+      csrfRecoveryPromise ??= recoverCsrf().finally(() => {
+        csrfRecoveryPromise = null;
+      });
+
+      try {
+        await csrfRecoveryPromise;
+      } catch (recoveryError) {
+        authExpiredHandler?.();
+        return Promise.reject(normalizeError(recoveryError));
+      }
+
+      return apiClient.request(config);
+    }
+
     if (!shouldRefresh(error)) {
       return Promise.reject(normalizeError(error));
     }

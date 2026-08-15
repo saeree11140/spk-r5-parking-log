@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import type { AuthService } from './auth.service';
 import type { AuthenticatedUser, AuthTokens } from './auth.types';
 import { DomainError } from '../common/domain-error';
+import type { TokenService } from './token.service';
 
 const user: AuthenticatedUser = {
   id: '00000000-0000-4000-8000-000000000002',
@@ -37,14 +38,19 @@ describe('AuthController', () => {
     };
     const cookieService = {
       setAuthCookies: jest.fn(),
+      setCsrfCookie: jest.fn(),
       clearAuthCookies: jest.fn(),
+    };
+    const tokenService = {
+      createCsrfToken: jest.fn().mockReturnValue('renewed-csrf-token'),
     };
     const controller = new AuthController(
       authService as unknown as AuthService,
       cookieService as unknown as AuthCookieService,
+      tokenService as unknown as TokenService,
     );
 
-    return { controller, authService, cookieService };
+    return { controller, authService, cookieService, tokenService };
   }
 
   it('sets cookies and returns only the user after login', async () => {

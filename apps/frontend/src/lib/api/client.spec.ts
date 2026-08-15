@@ -7,9 +7,15 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "./api-error";
-import { apiClient, authRefreshClient, runWithAuthRefreshLock } from "./client";
+import {
+  apiClient,
+  authRefreshClient,
+  registerAuthExpiredHandler,
+  runWithAuthRefreshLock,
+} from "./client";
 
 const originalRefreshAdapter = authRefreshClient.defaults.adapter;
+const originalApiAdapter = apiClient.defaults.adapter;
 const originalLocks = navigator.locks;
 
 function success(
@@ -35,6 +41,7 @@ function makeConfig(): InternalAxiosRequestConfig {
 
 describe("apiClient", () => {
   afterEach(() => {
+    apiClient.defaults.adapter = originalApiAdapter;
     authRefreshClient.defaults.adapter = originalRefreshAdapter;
     Object.defineProperty(navigator, "locks", {
       configurable: true,
@@ -149,6 +156,121 @@ describe("apiClient", () => {
 
     expect(apiClient.defaults.withCredentials).toBe(true);
     expect(captured[0]?.headers.get("X-CSRF-Token")).toBe("csrf-token");
+  });
+
+  it("renews a stale CSRF cookie and retries a mutation once", async () => {
+    document.cookie = "spk_r5_csrf=stale-token; path=/";
+    const requests: Array<{ csrf: unknown; method: string; url: string }> = [];
+    let mutationAttempts = 0;
+
+    apiClient.defaults.adapter = async (config) => {
+      requests.push({
+        csrf: config.headers.get("X-CSRF-Token"),
+        method: config.method ?? "",
+        url: config.url ?? "",
+      });
+
+      if (config.url === "/auth/csrf") {
+        document.cookie = "spk_r5_csrf=renewed-token; path=/";
+        return success(config, { success: true });
+      }
+
+      mutationAttempts += 1;
+      if (mutationAttempts === 1) {
+        throw new AxiosError(
+          "CSRF validation failed",
+          "ERR_BAD_REQUEST",
+          config,
+          undefined,
+          {
+            config,
+            data: {
+              code: "CSRF_INVALID",
+              message: "CSRF validation failed",
+              statusCode: 403,
+            },
+            headers: {},
+            status: 403,
+            statusText: "Forbidden",
+          },
+        );
+      }
+
+      return success(config, { violation: { id: "violation-002" } });
+    };
+
+    await expect(
+      apiClient.post("/houses/R5-055/violations", {}),
+    ).resolves.toMatchObject({
+      data: { violation: { id: "violation-002" } },
+    });
+    expect(requests).toEqual([
+      {
+        csrf: "stale-token",
+        method: "post",
+        url: "/houses/R5-055/violations",
+      },
+      { csrf: undefined, method: "get", url: "/auth/csrf" },
+      {
+        csrf: "renewed-token",
+        method: "post",
+        url: "/houses/R5-055/violations",
+      },
+    ]);
+  });
+
+  it("preserves a business error returned after CSRF recovery", async () => {
+    document.cookie = "spk_r5_csrf=stale-token; path=/";
+    const onAuthExpired = vi.fn();
+    const unregister = registerAuthExpiredHandler(onAuthExpired);
+    let mutationAttempts = 0;
+
+    apiClient.defaults.adapter = async (config) => {
+      if (config.url === "/auth/csrf") {
+        document.cookie = "spk_r5_csrf=renewed-token; path=/";
+        return success(config, { success: true });
+      }
+
+      mutationAttempts += 1;
+      const data =
+        mutationAttempts === 1
+          ? {
+              code: "CSRF_INVALID",
+              message: "CSRF validation failed",
+              statusCode: 403,
+            }
+          : {
+              code: "CYCLE_CLOSED",
+              message: "Cycle is closed",
+              statusCode: 409,
+            };
+      throw new AxiosError(
+        data.message,
+        "ERR_BAD_REQUEST",
+        config,
+        undefined,
+        {
+          config,
+          data,
+          headers: {},
+          status: data.statusCode,
+          statusText: "Request failed",
+        },
+      );
+    };
+
+    try {
+      await expect(
+        apiClient.post("/houses/R5-055/violations", {}),
+      ).rejects.toMatchObject({
+        code: "CYCLE_CLOSED",
+        message: "Cycle is closed",
+        statusCode: 409,
+      });
+      expect(onAuthExpired).not.toHaveBeenCalled();
+    } finally {
+      unregister();
+    }
   });
 
   it("uses one refresh for concurrent 401s and retries each request once", async () => {

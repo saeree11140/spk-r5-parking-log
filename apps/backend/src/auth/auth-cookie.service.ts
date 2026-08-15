@@ -24,9 +24,17 @@ export class AuthCookieService {
       ...this.cookieOptions('/api/auth', true),
       maxAge: this.maxAge(tokens.sessionExpiresAt),
     });
-    response.cookie(CSRF_COOKIE_NAME, tokens.csrfToken, {
+    this.setCsrfCookie(response, tokens.csrfToken, tokens.sessionExpiresAt);
+  }
+
+  setCsrfCookie(
+    response: Response,
+    csrfToken: string,
+    sessionExpiresAt: Date,
+  ): void {
+    response.cookie(CSRF_COOKIE_NAME, csrfToken, {
       ...this.cookieOptions('/', false),
-      maxAge: this.maxAge(tokens.sessionExpiresAt),
+      maxAge: this.maxAge(sessionExpiresAt),
     });
   }
 
