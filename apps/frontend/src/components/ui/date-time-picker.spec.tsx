@@ -8,7 +8,7 @@ import { renderWithQueryClient } from "@/test/render";
 import { DateTimePickerField } from "./date-time-picker";
 
 function PickerHarness({
-  initialValue = "2026-08-14T17:30",
+  initialValue = "2026-08-14T17:30:45",
   maxValue,
   minValue,
   onChangeSpy,
@@ -43,13 +43,11 @@ describe("DateTimePickerField", () => {
     expect(
       screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
     ).toHaveTextContent("14/08/2569");
-    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
-      "17:30",
-    );
-    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveAttribute(
-      "type",
-      "time",
-    );
+    const time = screen.getByLabelText("เวลา วันเวลาเกิดเหตุ");
+    expect(time).toHaveValue("17:30:45");
+    expect(time).toHaveAttribute("type", "time");
+    expect(time).toHaveAttribute("step", "1");
+    expect(time).toHaveClass("date-time-picker__time-input");
     expect(
       document.querySelector('input[type="datetime-local"]'),
     ).not.toBeInTheDocument();
@@ -67,7 +65,7 @@ describe("DateTimePickerField", () => {
       screen.getByRole("button", { name: /15 สิงหาคม 2569/ }),
     );
 
-    expect(onChange).toHaveBeenLastCalledWith("2026-08-15T17:30");
+    expect(onChange).toHaveBeenLastCalledWith("2026-08-15T17:30:45");
     expect(
       screen.queryByRole("dialog", { name: "เลือกวันที่" }),
     ).not.toBeInTheDocument();
@@ -78,10 +76,33 @@ describe("DateTimePickerField", () => {
     renderWithQueryClient(<PickerHarness onChangeSpy={onChange} />);
 
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
-      target: { value: "18:45" },
+      target: { value: "18:45:12" },
     });
 
-    expect(onChange).toHaveBeenLastCalledWith("2026-08-14T18:45");
+    expect(onChange).toHaveBeenLastCalledWith("2026-08-14T18:45:12");
+  });
+
+  it("displays a legacy minute value with zero seconds and emits canonical seconds", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderWithQueryClient(
+      <PickerHarness
+        initialValue="2026-08-14T17:30"
+        onChangeSpy={onChange}
+      />,
+    );
+
+    expect(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ")).toHaveValue(
+      "17:30:00",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "เลือกวันที่ วันเวลาเกิดเหตุ" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: /15 สิงหาคม 2569/ }),
+    );
+
+    expect(onChange).toHaveBeenLastCalledWith("2026-08-15T17:30:00");
   });
 
   it("does not render Apply or Cancel actions in the calendar", async () => {
@@ -104,13 +125,13 @@ describe("DateTimePickerField", () => {
     const onChange = vi.fn();
     renderWithQueryClient(
       <PickerHarness
-        maxValue="2026-08-14T17:30"
+        maxValue="2026-08-14T17:30:00"
         onChangeSpy={onChange}
       />,
     );
 
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
-      target: { value: "18:00" },
+      target: { value: "18:00:00" },
     });
 
     expect(onChange).toHaveBeenLastCalledWith("");
@@ -142,8 +163,8 @@ describe("DateTimePickerField", () => {
     const user = userEvent.setup();
     renderWithQueryClient(
       <PickerHarness
-        maxValue="2026-08-14T23:59"
-        minValue="2026-08-14T00:00"
+        maxValue="2026-08-14T23:59:59"
+        minValue="2026-08-14T00:00:00"
       />,
     );
 

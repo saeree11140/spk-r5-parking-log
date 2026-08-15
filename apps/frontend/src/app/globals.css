@@ -854,6 +854,16 @@ tbody tr:hover {
   box-shadow: 0 0 0 3px rgb(23 92 211 / 12%);
 }
 
+.date-time-picker__time-input {
+  appearance: none;
+  background: var(--surface);
+}
+
+.date-time-picker__time-input::-webkit-calendar-picker-indicator {
+  display: none;
+  appearance: none;
+}
+
 .date-time-picker__positioner {
   z-index: 200;
   max-width: calc(100vw - 32px);

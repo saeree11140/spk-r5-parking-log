@@ -6,6 +6,7 @@ import { th } from "react-day-picker/locale";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -29,11 +30,18 @@ interface DateTimePickerFieldProps {
 }
 
 const NORMALIZED_DATE_TIME_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
-const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
+}
+
+function canonicalTime(value: string): string | undefined {
+  const match = TIME_PATTERN.exec(value);
+  if (!match) return undefined;
+  const [, hour, minute, second = "00"] = match;
+  return `${hour}:${minute}:${second}`;
 }
 
 function partsFromNormalized(
@@ -42,7 +50,15 @@ function partsFromNormalized(
   const match = value ? NORMALIZED_DATE_TIME_PATTERN.exec(value) : null;
   if (!match) return undefined;
 
-  const [, yearValue, monthValue, dayValue, hourValue, minuteValue] = match;
+  const [
+    ,
+    yearValue,
+    monthValue,
+    dayValue,
+    hourValue,
+    minuteValue,
+    secondValue = "00",
+  ] = match;
   const year = Number(yearValue);
   const month = Number(monthValue);
   const day = Number(dayValue);
@@ -55,15 +71,17 @@ function partsFromNormalized(
     return undefined;
   }
 
-  return { date, time: `${hourValue}:${minuteValue}` };
+  const time = canonicalTime(`${hourValue}:${minuteValue}:${secondValue}`);
+  return time ? { date, time } : undefined;
 }
 
 function normalizedFromParts(
   date: Date | undefined,
   time: string,
 ): string | undefined {
-  if (!date || !TIME_PATTERN.test(time)) return undefined;
-  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${time}`;
+  const normalizedTime = canonicalTime(time);
+  if (!date || !normalizedTime) return undefined;
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${normalizedTime}`;
 }
 
 function formatBuddhistDate(date: Date | undefined): string {
@@ -178,8 +196,9 @@ export const DateTimePickerField = forwardRef<
   }
 
   function handleTimeChange(nextTime: string) {
-    setTimeValue(nextTime);
-    emitParts(selectedDate, nextTime);
+    const normalizedTime = canonicalTime(nextTime) ?? nextTime;
+    setTimeValue(normalizedTime);
+    emitParts(selectedDate, normalizedTime);
   }
 
   const minimumDate = dateFromNormalized(minValue);
@@ -242,14 +261,15 @@ export const DateTimePickerField = forwardRef<
             />
           </PopoverContent>
         </Popover>
-        <input
+        <Input
           ref={forwardedRef}
           aria-describedby={visibleError ? errorId : undefined}
           aria-invalid={visibleError ? "true" : undefined}
           aria-label={`เวลา ${label}`}
+          className="date-time-picker__time-input appearance-none"
           disabled={disabled}
           name={name}
-          step="60"
+          step="1"
           type="time"
           value={timeValue}
           onBlur={onBlur}
