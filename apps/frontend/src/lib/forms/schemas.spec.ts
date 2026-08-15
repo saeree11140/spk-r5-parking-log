@@ -24,7 +24,7 @@ describe("createViolationSchema", () => {
 
   it("rejects an occurred-at value in the future", () => {
     const result = createViolationSchema(now).safeParse({
-      occurredAt: "2026-07-20T10:01",
+      occurredAt: "2026-07-20T10:00:01",
     });
 
     expect(messages(result)).toContain("วันเวลาต้องไม่อยู่ในอนาคต");
@@ -120,6 +120,15 @@ describe("markFinePaidSchema", () => {
     });
 
     expect(messages(result)).toContain("เวลาชำระต้องไม่ก่อนเวลาเกิดเหตุ");
+  });
+
+  it("allows payment at the exact violation second", () => {
+    const exactOccurredAt = "2026-07-20T02:00:45.000Z";
+    const result = markFinePaidSchema(exactOccurredAt, now).safeParse({
+      paidAt: "2026-07-20T09:00:45",
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("trims reference and omits an empty reference", () => {

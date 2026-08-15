@@ -1,14 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
-  formatDateTimeInputValue,
   formatThaiDateTime,
   isBeforeViolation,
   isFutureDateTime,
   isLocalDateTimeInRange,
   localDateTimeToIso,
-  maskDateTimeInputValue,
-  parseDateTimeInputValue,
   toDateTimeLocalCeilingValue,
   toDateTimeLocalValue,
 } from "./date-time";
@@ -35,25 +32,31 @@ describe("date-time utilities", () => {
     expect(formatThaiDateTime("invalid")).toBe("—");
   });
 
-  it("converts an API timestamp to a Bangkok datetime-local value when the host timezone is UTC", () => {
-    expect(toDateTimeLocalValue("2026-07-01T03:00:00.000Z")).toBe(
-      "2026-07-01T10:00",
+  it("converts an API timestamp to a second-precision Bangkok local value", () => {
+    expect(toDateTimeLocalValue("2026-07-01T03:00:45.123Z")).toBe(
+      "2026-07-01T10:00:45",
     );
   });
 
-  it("rounds a timestamp with seconds up to the next Bangkok minute", () => {
+  it("rounds a timestamp with milliseconds up to the next Bangkok second", () => {
     expect(toDateTimeLocalCeilingValue("2026-07-01T03:00:45.123Z")).toBe(
-      "2026-07-01T10:01",
+      "2026-07-01T10:00:46",
     );
   });
 
-  it("keeps an exact-minute timestamp unchanged when rounding", () => {
-    expect(toDateTimeLocalCeilingValue("2026-07-01T03:00:00.000Z")).toBe(
-      "2026-07-01T10:00",
+  it("keeps an exact-second timestamp unchanged when rounding", () => {
+    expect(toDateTimeLocalCeilingValue("2026-07-01T03:00:45.000Z")).toBe(
+      "2026-07-01T10:00:45",
     );
   });
 
-  it("converts a Bangkok datetime-local value to ISO when the host timezone is UTC", () => {
+  it("converts a second-precision Bangkok local value to ISO", () => {
+    expect(localDateTimeToIso("2026-07-01T10:00:45")).toBe(
+      "2026-07-01T03:00:45.000Z",
+    );
+  });
+
+  it("accepts a legacy minute-precision local value as zero seconds", () => {
     expect(localDateTimeToIso("2026-07-01T10:00")).toBe(
       "2026-07-01T03:00:00.000Z",
     );
@@ -68,7 +71,7 @@ describe("date-time utilities", () => {
   it("detects a local datetime later than now", () => {
     expect(
       isFutureDateTime(
-        "2026-07-20T10:01",
+        "2026-07-20T10:00:01",
         new Date("2026-07-20T03:00:00.000Z"),
       ),
     ).toBe(true);
@@ -77,7 +80,7 @@ describe("date-time utilities", () => {
   it("allows a local datetime equal to now", () => {
     expect(
       isFutureDateTime(
-        "2026-07-20T10:00",
+        "2026-07-20T10:00:00",
         new Date("2026-07-20T03:00:00.000Z"),
       ),
     ).toBe(false);
@@ -85,48 +88,8 @@ describe("date-time utilities", () => {
 
   it("detects payment before the violation timestamp", () => {
     expect(
-      isBeforeViolation("2026-07-01T09:59", "2026-07-01T03:00:00.000Z"),
+      isBeforeViolation("2026-07-01T09:59:59", "2026-07-01T03:00:00.000Z"),
     ).toBe(true);
-  });
-
-  it("formats a normalized value as a Buddhist date-time input", () => {
-    expect(formatDateTimeInputValue("2026-08-14T17:30")).toBe(
-      "14/08/2569 17:30",
-    );
-  });
-
-  it("parses a Buddhist date-time input into the normalized value", () => {
-    expect(parseDateTimeInputValue("14/08/2569 17:30")).toBe(
-      "2026-08-14T17:30",
-    );
-  });
-
-  it("accepts a real Buddhist leap day", () => {
-    expect(parseDateTimeInputValue("29/02/2567 00:00")).toBe(
-      "2024-02-29T00:00",
-    );
-  });
-
-  it("rejects an impossible Buddhist date", () => {
-    expect(() => parseDateTimeInputValue("29/02/2568 10:00")).toThrow(
-      "Invalid date time input",
-    );
-  });
-
-  it("rejects a time outside the 24-hour range", () => {
-    expect(() => parseDateTimeInputValue("14/08/2569 24:00")).toThrow(
-      "Invalid date time input",
-    );
-  });
-
-  it("masks twelve entered digits as day month Buddhist year and time", () => {
-    expect(maskDateTimeInputValue("140825691730")).toBe("14/08/2569 17:30");
-  });
-
-  it("strips non-Latin digits and limits the mask to twelve digits", () => {
-    expect(maskDateTimeInputValue("14a08/2569 17:3099")).toBe(
-      "14/08/2569 17:30",
-    );
   });
 
   it("treats range boundaries as inclusive", () => {
@@ -141,7 +104,11 @@ describe("date-time utilities", () => {
 
   it("rejects a normalized value after the maximum", () => {
     expect(
-      isLocalDateTimeInRange("2026-08-14T17:30", undefined, "2026-08-14T17:29"),
+      isLocalDateTimeInRange(
+        "2026-08-14T17:30:01",
+        undefined,
+        "2026-08-14T17:30:00",
+      ),
     ).toBe(false);
   });
 });
