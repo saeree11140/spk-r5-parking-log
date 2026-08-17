@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, Noto_Sans_Thai } from "next/font/google";
+import { Chakra_Petch, IBM_Plex_Sans_Thai } from "next/font/google";
 
 import { AuthGate } from "@/features/auth/auth-gate";
 import { ADMIN_ROBOTS_METADATA } from "@/lib/admin-metadata";
@@ -7,9 +7,10 @@ import { ADMIN_ROBOTS_METADATA } from "@/lib/admin-metadata";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const notoSansThai = Noto_Sans_Thai({
+const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   subsets: ["latin", "thai"],
   variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
 });
 
 const chakraPetch = Chakra_Petch({
@@ -31,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${notoSansThai.variable} ${chakraPetch.variable}`}
+      className={`${ibmPlexSansThai.variable} ${chakraPetch.variable}`}
       lang="th"
     >
       <body>
