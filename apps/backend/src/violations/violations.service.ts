@@ -258,10 +258,22 @@ export class ViolationsService {
     const latestCycle = await tx.violationCycle.findFirst({
       where: { houseId },
       orderBy: { cycleNumber: 'desc' },
+      include: {
+        violations: {
+          where: { status: { not: 'CANCELLED' } },
+          orderBy: [
+            { occurredAt: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
+          take: 1,
+        },
+      },
     });
+    const latestViolation = latestCycle?.violations[0];
     if (
-      latestCycle?.closedAt &&
-      occurredAt.getTime() <= latestCycle.closedAt.getTime()
+      latestViolation &&
+      occurredAt.getTime() < latestViolation.occurredAt.getTime()
     ) {
       throw new DomainError(
         409,

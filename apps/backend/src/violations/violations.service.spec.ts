@@ -59,6 +59,7 @@ describe('ViolationsService.create', () => {
           .mockResolvedValueOnce({
             cycleNumber: 1,
             closedAt: new Date('2026-07-19T00:00:00Z'),
+            violations: [{ occurredAt: new Date('2026-07-19T04:00:00Z') }],
           }),
       },
     };
@@ -73,6 +74,109 @@ describe('ViolationsService.create', () => {
         'Violation cannot be backdated before closed cycle',
       ),
     );
+  });
+
+  it.each([
+    {
+      description: 'after the last violation even before the cycle closed',
+      latestViolationAt: '2025-10-04T01:50:04Z',
+    },
+    {
+      description: 'at the same time as the last violation',
+      latestViolationAt: '2026-07-26T01:50:04Z',
+    },
+  ])('starts a new cycle $description', async ({ latestViolationAt }) => {
+    const nextOccurredAt = '2026-07-26T08:50:04+07:00';
+    const violation = {
+      id: '00000000-0000-4000-8000-000000000001',
+      cycleId: 'cycle-2',
+      sequenceNumber: 1,
+      occurredAt: new Date('2026-07-26T01:50:04Z'),
+      createdAt: new Date('2026-07-26T01:50:04Z'),
+      status: 'WARNING',
+      note: 'ผิดระเบียบครั้งที่ 1',
+      cancelledAt: null,
+      cancellationReason: null,
+      fine: null,
+    };
+    const findCycle = jest
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'cycle-1',
+        cycleNumber: 1,
+        closedAt: new Date('2026-08-17T01:51:29Z'),
+        violations: [{ occurredAt: new Date(latestViolationAt) }],
+      });
+    const createCycle = jest.fn().mockResolvedValue({
+      id: 'cycle-2',
+      cycleNumber: 2,
+      status: 'OPEN',
+    });
+    const tx = {
+      house: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'house-1', isActive: true }),
+      },
+      violationCycle: {
+        findFirst: findCycle,
+        create: createCycle,
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: 'cycle-2',
+          cycleNumber: 2,
+          status: 'OPEN',
+          violations: [violation],
+        }),
+      },
+      parkingViolation: {
+        aggregate: jest
+          .fn()
+          .mockResolvedValue({ _max: { sequenceNumber: null } }),
+        create: jest.fn().mockResolvedValue(violation),
+        findMany: jest.fn().mockResolvedValue([violation]),
+        update: jest.fn().mockResolvedValue(violation),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(violation),
+      },
+      fine: {
+        count: jest.fn().mockResolvedValue(0),
+        update: jest.fn(),
+        upsert: jest.fn(),
+      },
+      auditLog: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const service = new ViolationsService(prismaFor(tx));
+
+    const result = await service.create(
+      'R5-026',
+      { occurredAt: nextOccurredAt, note: 'ผิดระเบียบครั้งที่ 1' },
+      SYSTEM_ACTOR,
+    );
+
+    expect(createCycle).toHaveBeenCalledWith({
+      data: {
+        houseId: 'house-1',
+        cycleNumber: 2,
+        status: 'OPEN',
+        openedAt: new Date('2026-07-26T01:50:04Z'),
+      },
+    });
+    expect(findCycle).toHaveBeenNthCalledWith(2, {
+      where: { houseId: 'house-1' },
+      orderBy: { cycleNumber: 'desc' },
+      include: {
+        violations: {
+          where: { status: { not: 'CANCELLED' } },
+          orderBy: [
+            { occurredAt: 'desc' },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ],
+          take: 1,
+        },
+      },
+    });
+    expect(result.currentCycle.cycleNumber).toBe(2);
   });
 
   it('rejects backdating after a fine has been paid', async () => {
