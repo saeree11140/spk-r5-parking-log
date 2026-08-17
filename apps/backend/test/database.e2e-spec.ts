@@ -68,7 +68,9 @@ describe('Database and house seed (e2e)', () => {
 
     expect(houses).toHaveLength(164);
     expect(houses[0]?.code).toBe('R5-001');
+    expect(houses[0]?.actualHouseNumber).toBe('1');
     expect(houses[163]?.code).toBe('R5-164');
+    expect(houses[163]?.actualHouseNumber).toBe('164');
     expect(new Set(houses.map(({ code }) => code)).size).toBe(164);
     expect(
       new Set(houses.map(({ sequenceNumber }) => sequenceNumber)).size,
