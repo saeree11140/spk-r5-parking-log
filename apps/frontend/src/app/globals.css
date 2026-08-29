@@ -539,7 +539,9 @@ a {
   min-width: 260px;
   gap: 5px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
 }
 
 .select-field select {
@@ -587,8 +589,9 @@ td {
 th {
   color: var(--muted);
   background: #f9fafb;
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 600;
+  line-height: 26px;
   letter-spacing: 0.02em;
 }
 
