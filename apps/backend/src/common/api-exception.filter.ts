@@ -7,6 +7,7 @@ import {
 import type { Response } from 'express';
 
 import { DomainError } from './domain-error';
+import { isSerializationConflict } from './serializable-transaction';
 
 interface ErrorEnvelope {
   statusCode: number;
@@ -38,12 +39,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
       };
     }
 
-    if (
-      typeof exception === 'object' &&
-      exception !== null &&
-      'code' in exception &&
-      exception.code === 'P2034'
-    ) {
+    if (isSerializationConflict(exception)) {
       return {
         statusCode: 409,
         body: {

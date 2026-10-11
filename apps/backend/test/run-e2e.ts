@@ -76,6 +76,8 @@ async function main(): Promise<void> {
       'jest',
       '--config',
       './test/jest-e2e.json',
+      // Suites share one database, so run them one at a time.
+      '--runInBand',
       ...process.argv.slice(2),
     ],
     {

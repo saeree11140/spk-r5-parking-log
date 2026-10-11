@@ -58,6 +58,25 @@ describe('ApiExceptionFilter', () => {
     });
   });
 
+  it('maps an exhausted adapter write conflict to stable 409', () => {
+    const { host, status, json } = createHost();
+
+    new ApiExceptionFilter().catch(
+      {
+        name: 'DriverAdapterError',
+        cause: { originalCode: '40001', kind: 'TransactionWriteConflict' },
+      },
+      host,
+    );
+
+    expect(status).toHaveBeenCalledWith(409);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 409,
+      code: 'CONCURRENT_MODIFICATION',
+      message: 'Concurrent modification, retry request',
+    });
+  });
+
   it('maps exhausted serialization conflict to stable 409', () => {
     const { host, status, json } = createHost();
 
