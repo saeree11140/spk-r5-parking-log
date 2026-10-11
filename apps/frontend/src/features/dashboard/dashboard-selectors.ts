@@ -1,6 +1,10 @@
 import type { HouseSummary } from "@spk-r5-parking-log/shared-types";
 
-import type { HouseFilter } from "@/stores/dashboard-store";
+import {
+  ALL_CATEGORIES,
+  type CategoryFilter,
+  type HouseFilter,
+} from "@/stores/dashboard-store";
 
 export interface DashboardMetrics {
   activeViolationHouseCount: number;
@@ -15,8 +19,19 @@ export interface CurrentActivity {
   violationCount: number;
 }
 
-export function getCurrentActivity(house: HouseSummary): CurrentActivity {
-  return house.currentCycles.reduce<CurrentActivity>(
+function currentCyclesFor(house: HouseSummary, categoryFilter: CategoryFilter) {
+  return categoryFilter === ALL_CATEGORIES
+    ? house.currentCycles
+    : house.currentCycles.filter(
+        ({ category }) => category.id === categoryFilter,
+      );
+}
+
+export function getCurrentActivity(
+  house: HouseSummary,
+  categoryFilter: CategoryFilter = ALL_CATEGORIES,
+): CurrentActivity {
+  return currentCyclesFor(house, categoryFilter).reduce<CurrentActivity>(
     (total, cycle) => ({
       pendingAmountBaht: total.pendingAmountBaht + cycle.pendingAmountBaht,
       pendingFineCount: total.pendingFineCount + cycle.pendingFineCount,
@@ -26,10 +41,13 @@ export function getCurrentActivity(house: HouseSummary): CurrentActivity {
   );
 }
 
-export function getDashboardMetrics(houses: HouseSummary[]): DashboardMetrics {
+export function getDashboardMetrics(
+  houses: HouseSummary[],
+  categoryFilter: CategoryFilter = ALL_CATEGORIES,
+): DashboardMetrics {
   return houses.reduce<DashboardMetrics>(
     (metrics, house) => {
-      const activity = getCurrentActivity(house);
+      const activity = getCurrentActivity(house, categoryFilter);
 
       return {
         activeViolationHouseCount:
@@ -50,14 +68,18 @@ export function getDashboardMetrics(houses: HouseSummary[]): DashboardMetrics {
   );
 }
 
-function matchesFilter(house: HouseSummary, filter: HouseFilter): boolean {
+function matchesFilter(
+  house: HouseSummary,
+  filter: HouseFilter,
+  categoryFilter: CategoryFilter,
+): boolean {
   switch (filter) {
     case "ACTIVE_VIOLATIONS":
-      return getCurrentActivity(house).violationCount > 0;
+      return getCurrentActivity(house, categoryFilter).violationCount > 0;
     case "PENDING_FINE":
-      return getCurrentActivity(house).pendingFineCount > 0;
+      return getCurrentActivity(house, categoryFilter).pendingFineCount > 0;
     case "NO_CURRENT_ACTIVITY":
-      return house.currentCycles.length === 0;
+      return currentCyclesFor(house, categoryFilter).length === 0;
     case "INACTIVE":
       return !house.isActive;
     case "ALL":
@@ -69,6 +91,7 @@ export function filterHouses(
   houses: HouseSummary[],
   searchQuery: string,
   filter: HouseFilter,
+  categoryFilter: CategoryFilter = ALL_CATEGORIES,
 ): HouseSummary[] {
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase("th");
 
@@ -81,7 +104,7 @@ export function filterHouses(
           .toLocaleLowerCase("th")
           .includes(normalizedSearch);
 
-      return matchesSearch && matchesFilter(house, filter);
+      return matchesSearch && matchesFilter(house, filter, categoryFilter);
     })
     .sort((left, right) => left.sequenceNumber - right.sequenceNumber);
 }

@@ -5,6 +5,8 @@ import {
   useDashboardStore,
 } from "@/stores/dashboard-store";
 
+import { CategoryFilterSelect } from "./category-filter-select";
+
 const filterOptions: Array<{ label: string; value: HouseFilter }> = [
   { label: "ทั้งหมด", value: "ALL" },
   { label: "มี Violation", value: "ACTIVE_VIOLATIONS" },
@@ -48,6 +50,7 @@ export function HouseFilters() {
           ))}
         </select>
       </label>
+      <CategoryFilterSelect />
     </section>
   );
 }

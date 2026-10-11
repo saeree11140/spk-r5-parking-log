@@ -3,11 +3,18 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/ui/status-badge";
+import type { CategoryFilter } from "@/stores/dashboard-store";
 
 import { getCurrentActivity } from "./dashboard-selectors";
 import { formatBaht } from "./dashboard-summary";
 
-export function HouseTable({ houses }: { houses: HouseSummary[] }) {
+export function HouseTable({
+  categoryFilter,
+  houses,
+}: {
+  categoryFilter: CategoryFilter;
+  houses: HouseSummary[];
+}) {
   return (
     <div className="table-card">
       <div className="table-scroll">
@@ -25,7 +32,7 @@ export function HouseTable({ houses }: { houses: HouseSummary[] }) {
           </thead>
           <tbody>
             {houses.map((house) => {
-              const activity = getCurrentActivity(house);
+              const activity = getCurrentActivity(house, categoryFilter);
 
               return (
                 <tr key={house.id}>

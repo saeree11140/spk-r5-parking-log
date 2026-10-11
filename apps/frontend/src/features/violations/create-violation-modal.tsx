@@ -2,7 +2,7 @@
 
 import type { CreateViolationInput } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   type CreateViolationFormValues,
 } from "@/lib/forms/schemas";
 import { invalidateParkingQueries, queryKeys } from "@/lib/query/keys";
+import { useViolationCategoriesQuery } from "@/lib/query/use-violation-categories";
 
 import { ViolationFormFields } from "./violation-form-fields";
 
@@ -36,11 +37,7 @@ export function CreateViolationModal({
   const now = new Date();
   const maximumOccurredAt = toDateTimeLocalValue(now);
   const schema = createViolationSchema(now);
-  const categoriesQuery = useQuery({
-    enabled: open,
-    queryFn: () => parkingApi.getViolationCategories(),
-    queryKey: queryKeys.violationCategories,
-  });
+  const categoriesQuery = useViolationCategoriesQuery({ enabled: open });
   const activeCategories = categoriesQuery.data?.filter(
     ({ isActive }) => isActive,
   );

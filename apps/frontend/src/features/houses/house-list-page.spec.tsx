@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parkingApi } from "@/lib/api/parking-api";
 import { useDashboardStore } from "@/stores/dashboard-store";
-import { makeCycleSummary, makeHouseSummary } from "@/test/fixtures";
+import {
+  makeCycleSummary,
+  makeHouseSummary,
+  PARKING_CATEGORY,
+  PET_CATEGORY,
+} from "@/test/fixtures";
 import { renderWithQueryClient } from "@/test/render";
 
 import { HouseListPage } from "./house-list-page";
@@ -53,6 +58,10 @@ const houses = [
 
 beforeEach(() => {
   useDashboardStore.getState().resetDashboard();
+  vi.spyOn(parkingApi, "getViolationCategories").mockResolvedValue([
+    PARKING_CATEGORY,
+    PET_CATEGORY,
+  ]);
 });
 
 afterEach(() => {
@@ -105,5 +114,42 @@ describe("HouseListPage", () => {
     expect(screen.queryByText("R5-001")).not.toBeInTheDocument();
     expect(screen.getByText("R5-002")).toBeInTheDocument();
     expect(screen.getByText("R5-164")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "กรองหมวด" }),
+      await screen.findByRole("option", { name: PET_CATEGORY.name }),
+    );
+
+    expect(screen.queryByText("R5-002")).not.toBeInTheDocument();
+    expect(screen.getByText("ไม่พบบ้านตามเงื่อนไข")).toBeInTheDocument();
+  });
+
+  it("shows the selected category's totals in the table", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(parkingApi, "getHouses").mockResolvedValue([
+      makeHouseSummary({
+        code: "R5-020",
+        currentCycles: [
+          makeCycleSummary({ pendingAmountBaht: 1_000, pendingFineCount: 1 }),
+          makeCycleSummary({
+            category: PET_CATEGORY,
+            id: "cycle-pet",
+            pendingAmountBaht: 500,
+            pendingFineCount: 1,
+          }),
+        ],
+        id: "house-020",
+        sequenceNumber: 20,
+      }),
+    ]);
+    renderWithQueryClient(<HouseListPage />);
+    expect(await screen.findByText("฿1,500")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "กรองหมวด" }),
+      await screen.findByRole("option", { name: PET_CATEGORY.name }),
+    );
+
+    expect(await screen.findByText("฿500")).toBeInTheDocument();
   });
 });

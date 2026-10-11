@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/ui/feedback";
 import { parkingApi } from "@/lib/api/parking-api";
 import { queryKeys } from "@/lib/query/keys";
+import { useDashboardStore } from "@/stores/dashboard-store";
 
+import { CategoryFilterSelect } from "./category-filter-select";
 import { getDashboardMetrics } from "./dashboard-selectors";
 import {
   DashboardSummary,
@@ -15,6 +17,7 @@ import {
 } from "./dashboard-summary";
 
 export function DashboardPage() {
+  const categoryFilter = useDashboardStore((state) => state.categoryFilter);
   const housesQuery = useQuery({
     queryFn: parkingApi.getHouses,
     queryKey: queryKeys.houses,
@@ -55,7 +58,12 @@ export function DashboardPage() {
         onRefresh={() => void housesQuery.refetch()}
         refreshing={housesQuery.isFetching}
       />
-      <DashboardSummary metrics={getDashboardMetrics(houses)} />
+      {houses.length > 0 ? (
+        <section aria-label="กรองภาพรวม" className="filter-bar">
+          <CategoryFilterSelect />
+        </section>
+      ) : null}
+      <DashboardSummary metrics={getDashboardMetrics(houses, categoryFilter)} />
       {houses.length === 0 ? (
         <EmptyState
           description="ตรวจสอบว่า Backend และฐานข้อมูลพร้อมใช้งาน"

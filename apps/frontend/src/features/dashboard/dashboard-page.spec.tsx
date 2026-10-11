@@ -5,7 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/api-error";
 import { parkingApi } from "@/lib/api/parking-api";
 import { useDashboardStore } from "@/stores/dashboard-store";
-import { makeCycleSummary, makeHouseSummary } from "@/test/fixtures";
+import {
+  makeCycleSummary,
+  makeHouseSummary,
+  PARKING_CATEGORY,
+  PET_CATEGORY,
+} from "@/test/fixtures";
 import { renderWithQueryClient } from "@/test/render";
 
 import { DashboardPage } from "./dashboard-page";
@@ -54,6 +59,10 @@ const houses = [
 
 beforeEach(() => {
   useDashboardStore.getState().resetDashboard();
+  vi.spyOn(parkingApi, "getViolationCategories").mockResolvedValue([
+    PARKING_CATEGORY,
+    PET_CATEGORY,
+  ]);
 });
 
 afterEach(() => {
@@ -128,6 +137,54 @@ describe("DashboardPage", () => {
     expect(
       screen.queryByRole("link", { name: "ดูรายละเอียด" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("narrows KPI values to the selected category", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(parkingApi, "getHouses").mockResolvedValue([
+      ...houses,
+      makeHouseSummary({
+        code: "R5-050",
+        currentCycles: [
+          makeCycleSummary({
+            category: PET_CATEGORY,
+            id: "cycle-pet",
+            pendingAmountBaht: 700,
+            pendingFineCount: 1,
+            violationCount: 2,
+          }),
+        ],
+        id: "house-050",
+        sequenceNumber: 50,
+      }),
+    ]);
+    renderWithQueryClient(<DashboardPage />);
+    expect(await screen.findByText("฿2,200")).toBeInTheDocument();
+
+    const select = screen.getByLabelText("กรองหมวด");
+    expect(select).toHaveValue("ALL");
+    await user.selectOptions(
+      select,
+      await screen.findByRole("option", { name: PET_CATEGORY.name }),
+    );
+
+    expect(await screen.findByText("฿700")).toBeInTheDocument();
+  });
+
+  it("keeps a selected category visible while its name is unavailable", async () => {
+    vi.mocked(parkingApi.getViolationCategories).mockRejectedValue(
+      new ApiError("ล้มเหลว", "INTERNAL_ERROR", 500),
+    );
+    useDashboardStore.getState().setCategoryFilter(PET_CATEGORY.id);
+    vi.spyOn(parkingApi, "getHouses").mockResolvedValue(houses);
+    renderWithQueryClient(<DashboardPage />);
+
+    expect(await screen.findByText("โหลดหมวดไม่สำเร็จ")).toBeInTheDocument();
+    const select = screen.getByLabelText("กรองหมวด");
+    expect(select).toHaveValue(PET_CATEGORY.id);
+    expect(
+      screen.getByRole("option", { name: "หมวดที่เลือกไว้", selected: true }),
+    ).toBeInTheDocument();
   });
 
   it("refreshes houses only when requested", async () => {

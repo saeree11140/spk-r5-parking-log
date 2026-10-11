@@ -15,6 +15,7 @@ import { useDashboardStore } from "@/stores/dashboard-store";
 export function HouseListPage() {
   const searchQuery = useDashboardStore((state) => state.searchQuery);
   const houseFilter = useDashboardStore((state) => state.houseFilter);
+  const categoryFilter = useDashboardStore((state) => state.categoryFilter);
   const housesQuery = useQuery({
     queryFn: parkingApi.getHouses,
     queryKey: queryKeys.houses,
@@ -57,7 +58,12 @@ export function HouseListPage() {
   }
 
   const houses = housesQuery.data;
-  const filteredHouses = filterHouses(houses, searchQuery, houseFilter);
+  const filteredHouses = filterHouses(
+    houses,
+    searchQuery,
+    houseFilter,
+    categoryFilter,
+  );
 
   return (
     <div className="page-stack">
@@ -79,7 +85,10 @@ export function HouseListPage() {
               title="ไม่พบบ้านตามเงื่อนไข"
             />
           ) : (
-            <HouseTable houses={filteredHouses} />
+            <HouseTable
+              categoryFilter={categoryFilter}
+              houses={filteredHouses}
+            />
           )}
         </>
       )}

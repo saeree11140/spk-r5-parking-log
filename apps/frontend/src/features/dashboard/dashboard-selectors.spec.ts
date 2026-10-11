@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   makeCycleSummary,
   makeHouseSummary,
+  PARKING_CATEGORY,
   PET_CATEGORY,
 } from "@/test/fixtures";
 
@@ -87,6 +88,69 @@ describe("getDashboardMetrics with several categories", () => {
       pendingFineCount: 2,
       totalHouses: 1,
     });
+  });
+});
+
+describe("category filter", () => {
+  const parkingOnly = makeHouseSummary({
+    code: "R5-010",
+    currentCycles: [
+      makeCycleSummary({
+        pendingAmountBaht: 1_000,
+        pendingFineCount: 1,
+        violationCount: 2,
+      }),
+    ],
+    id: "house-010",
+    sequenceNumber: 10,
+  });
+  const petOnly = makeHouseSummary({
+    code: "R5-011",
+    currentCycles: [
+      makeCycleSummary({
+        category: PET_CATEGORY,
+        id: "cycle-pet",
+        violationCount: 1,
+      }),
+    ],
+    id: "house-011",
+    sequenceNumber: 11,
+  });
+
+  it("counts only the selected category in the metrics", () => {
+    expect(
+      getDashboardMetrics([parkingOnly, petOnly], PET_CATEGORY.id),
+    ).toEqual({
+      activeViolationHouseCount: 1,
+      pendingAmountBaht: 0,
+      pendingFineCount: 0,
+      totalHouses: 2,
+    });
+  });
+
+  it("combines the category with the status filter", () => {
+    expect(
+      filterHouses(
+        [parkingOnly, petOnly],
+        "",
+        "PENDING_FINE",
+        PARKING_CATEGORY.id,
+      ).map(({ code }) => code),
+    ).toEqual(["R5-010"]);
+    expect(
+      filterHouses([parkingOnly, petOnly], "", "PENDING_FINE", PET_CATEGORY.id),
+    ).toEqual([]);
+  });
+
+  it("treats a house without an open cycle in the category as inactive there", () => {
+    expect(
+      filterHouses(
+        [parkingOnly, petOnly],
+        "",
+        "NO_CURRENT_ACTIVITY",
+        PET_CATEGORY.id,
+      ).map(({ code }) => code),
+    ).toEqual(["R5-010"]);
   });
 });
 

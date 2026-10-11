@@ -1,7 +1,7 @@
 "use client";
 
 import type { ViolationCategorySummary } from "@spk-r5-parking-log/shared-types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Power } from "lucide-react";
 import { useState } from "react";
 
@@ -15,10 +15,8 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { parkingApi } from "@/lib/api/parking-api";
-import {
-  invalidateViolationCategoryQueries,
-  queryKeys,
-} from "@/lib/query/keys";
+import { invalidateViolationCategoryQueries } from "@/lib/query/keys";
+import { useViolationCategoriesQuery } from "@/lib/query/use-violation-categories";
 
 import { CategoryNameModal } from "./category-name-modal";
 
@@ -39,10 +37,7 @@ export function ViolationCategoriesPage() {
   }>({ open: false, target: null });
   const deactivateTarget = confirm.open ? confirm.target : null;
   const [notice, setNotice] = useState("");
-  const categoriesQuery = useQuery({
-    queryFn: () => parkingApi.getViolationCategories(),
-    queryKey: queryKeys.violationCategories,
-  });
+  const categoriesQuery = useViolationCategoriesQuery();
   const setActive = useMutation({
     mutationFn: ({
       category,
