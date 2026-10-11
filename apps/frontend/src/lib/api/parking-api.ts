@@ -6,6 +6,7 @@ import type {
   MarkFinePaidInput,
   MarkFinePaidResponse,
   UpdateViolationInput,
+  ViolationCategorySummary,
   ViolationMutationResponse,
 } from "@spk-r5-parking-log/shared-types";
 
@@ -24,6 +25,13 @@ export const parkingApi = {
   async getHouse(houseCode: string): Promise<HouseDetail> {
     const response = await apiClient.get<HouseDetail>(
       `/houses/${encodePath(houseCode)}`,
+    );
+    return response.data;
+  },
+
+  async getViolationCategories(): Promise<ViolationCategorySummary[]> {
+    const response = await apiClient.get<ViolationCategorySummary[]>(
+      "/violation-categories",
     );
     return response.data;
   },

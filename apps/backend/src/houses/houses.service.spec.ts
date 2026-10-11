@@ -16,6 +16,7 @@ function houseRecord() {
         id: 'cycle-1',
         cycleNumber: 1,
         fineRuleVersion: 'V1' as const,
+        category: { id: 'category-1', name: 'จอดรถผิดระเบียบ', isActive: true },
         status: 'OPEN' as const,
         openedAt: date,
         closedAt: null,
@@ -86,14 +87,21 @@ describe('HousesService', () => {
         sequenceNumber: 1,
         actualHouseNumber: null,
         isActive: true,
-        currentCycle: {
-          id: 'cycle-1',
-          cycleNumber: 1,
-          fineRuleVersion: 'V1',
-          violationCount: 2,
-          pendingFineCount: 1,
-          pendingAmountBaht: 1000,
-        },
+        currentCycles: [
+          {
+            id: 'cycle-1',
+            cycleNumber: 1,
+            fineRuleVersion: 'V1',
+            category: {
+              id: 'category-1',
+              name: 'จอดรถผิดระเบียบ',
+              isActive: true,
+            },
+            violationCount: 2,
+            pendingFineCount: 1,
+            pendingAmountBaht: 1000,
+          },
+        ],
       },
     ]);
     expect(findMany).toHaveBeenCalledTimes(1);

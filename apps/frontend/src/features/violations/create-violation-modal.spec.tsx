@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,9 +11,16 @@ import { CreateViolationModal } from "./create-violation-modal";
 
 process.env.TZ = "Asia/Bangkok";
 
+const PARKING_ID = "5c0f3d0e-7b1a-4c55-9a51-2f3c1f0a0001";
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-08-15T03:00:00.000Z"));
+  vi.spyOn(parkingApi, "getViolationCategories").mockResolvedValue([
+    { id: PARKING_ID, isActive: true, name: "จอดรถผิดระเบียบ" },
+    { id: "category-pet", isActive: true, name: "สัตว์เลี้ยงขับถ่าย" },
+    { id: "category-old", isActive: false, name: "หมวดที่เลิกใช้" },
+  ]);
 });
 
 afterEach(() => {
@@ -22,6 +29,59 @@ afterEach(() => {
 });
 
 describe("CreateViolationModal", () => {
+  it("requires a category and offers only active categories", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(parkingApi, "createViolation").mockResolvedValue({} as never);
+    renderWithQueryClient(
+      <CreateViolationModal
+        houseCode="R5-001"
+        onClose={() => undefined}
+        onSuccess={() => undefined}
+        open
+      />,
+    );
+
+    const select = await screen.findByLabelText("หมวด");
+    await screen.findByRole("option", { name: "จอดรถผิดระเบียบ" });
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["เลือกหมวด", "จอดรถผิดระเบียบ", "สัตว์เลี้ยงขับถ่าย"]);
+    expect(select).toHaveValue("");
+
+    await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
+
+    expect(await screen.findByText("กรุณาเลือกหมวด")).toBeInTheDocument();
+    expect(parkingApi.createViolation).not.toHaveBeenCalled();
+  });
+
+  it("lets the user retry loading categories", async () => {
+    const user = userEvent.setup();
+    vi.mocked(parkingApi.getViolationCategories)
+      .mockReset()
+      .mockRejectedValueOnce(new ApiError("ล้มเหลว", "INTERNAL_ERROR", 500))
+      .mockResolvedValueOnce([
+        { id: PARKING_ID, isActive: true, name: "จอดรถผิดระเบียบ" },
+      ]);
+    renderWithQueryClient(
+      <CreateViolationModal
+        houseCode="R5-001"
+        onClose={() => undefined}
+        onSuccess={() => undefined}
+        open
+      />,
+    );
+
+    expect(await screen.findByText("โหลดหมวดไม่สำเร็จ")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "ลองใหม่" }));
+
+    expect(
+      await screen.findByRole("option", { name: "จอดรถผิดระเบียบ" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("หมวด")).toBeEnabled();
+  });
+
   it("validates future time and an overlong note", async () => {
     const user = userEvent.setup();
     renderWithQueryClient(
@@ -75,11 +135,16 @@ describe("CreateViolationModal", () => {
     fireEvent.change(screen.getByLabelText("เวลา วันเวลาเกิดเหตุ"), {
       target: { value: "10:00:45" },
     });
+    await user.selectOptions(
+      await screen.findByLabelText("หมวด"),
+      await screen.findByRole("option", { name: "จอดรถผิดระเบียบ" }),
+    );
     await user.type(screen.getByLabelText("หมายเหตุ"), "  จอดกีดขวาง  ");
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
     await waitFor(() =>
       expect(parkingApi.createViolation).toHaveBeenCalledWith("R5-001", {
+        categoryId: PARKING_ID,
         note: "จอดกีดขวาง",
         occurredAt: "2026-07-01T03:00:45.000Z",
       }),
@@ -109,6 +174,10 @@ describe("CreateViolationModal", () => {
       />,
     );
 
+    await user.selectOptions(
+      await screen.findByLabelText("หมวด"),
+      await screen.findByRole("option", { name: "จอดรถผิดระเบียบ" }),
+    );
     await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
 
     expect(await screen.findByText("บ้านนี้ปิดใช้งาน")).toBeInTheDocument();

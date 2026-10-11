@@ -1,39 +1,62 @@
-import type { CycleResponse } from "@spk-r5-parking-log/shared-types";
+import type { CycleSummary } from "@spk-r5-parking-log/shared-types";
 
 import { formatBaht } from "@/features/dashboard/dashboard-summary";
 
-export function HouseSummary({
-  currentCycle,
-}: {
-  currentCycle: CycleResponse | null;
-}) {
-  const items = [
+function summaryItems(cycle: CycleSummary | null) {
+  return [
     {
       label: "Cycle ปัจจุบัน",
-      value: currentCycle ? String(currentCycle.cycleNumber) : "—",
+      value: cycle ? String(cycle.cycleNumber) : "—",
     },
     {
       label: "จำนวน Violation",
-      value: String(currentCycle?.violationCount ?? 0),
+      value: String(cycle?.violationCount ?? 0),
     },
     {
       label: "Fine รอชำระ",
-      value: String(currentCycle?.pendingFineCount ?? 0),
+      value: String(cycle?.pendingFineCount ?? 0),
     },
     {
       label: "ยอดรอชำระ",
-      value: formatBaht(currentCycle?.pendingAmountBaht ?? 0),
+      value: formatBaht(cycle?.pendingAmountBaht ?? 0),
     },
   ];
+}
 
+function SummaryCards({ cycle }: { cycle: CycleSummary | null }) {
   return (
-    <section aria-label="สรุปบ้าน" className="house-summary-grid">
-      {items.map((item) => (
+    <div className="house-summary-grid">
+      {summaryItems(cycle).map((item) => (
         <article className="house-summary-card" key={item.label}>
           <span>{item.label}</span>
           <strong className="metric-value">{item.value}</strong>
         </article>
       ))}
+    </div>
+  );
+}
+
+export function HouseSummary({
+  currentCycles,
+}: {
+  currentCycles: CycleSummary[];
+}) {
+  return (
+    <section aria-label="สรุปบ้าน" className="house-summary-stack">
+      {currentCycles.length === 0 ? (
+        <SummaryCards cycle={null} />
+      ) : (
+        currentCycles.map((cycle) => (
+          <section
+            aria-label={cycle.category.name}
+            className="house-summary-category"
+            key={cycle.id}
+          >
+            <h3>{cycle.category.name}</h3>
+            <SummaryCards cycle={cycle} />
+          </section>
+        ))
+      )}
     </section>
   );
 }

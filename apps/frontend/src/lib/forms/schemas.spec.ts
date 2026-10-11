@@ -16,6 +16,15 @@ function messages(result: { error?: { issues: Array<{ message: string }> } }) {
 }
 
 describe("createViolationSchema", () => {
+  it("requires a category", () => {
+    const result = createViolationSchema(now).safeParse({
+      categoryId: "",
+      occurredAt: "2026-07-20T10:00",
+    });
+
+    expect(messages(result)).toEqual(["กรุณาเลือกหมวด"]);
+  });
+
   it("requires an occurred-at value", () => {
     const result = createViolationSchema(now).safeParse({ occurredAt: "" });
 
@@ -35,12 +44,17 @@ describe("createViolationSchema", () => {
 
     expect(
       schema.parse({
+        categoryId: "category-parking",
         note: "  จอดกีดขวาง  ",
         occurredAt: "2026-07-20T10:00",
       }).note,
     ).toBe("จอดกีดขวาง");
     expect(
-      schema.parse({ note: "   ", occurredAt: "2026-07-20T10:00" }).note,
+      schema.parse({
+        categoryId: "category-parking",
+        note: "   ",
+        occurredAt: "2026-07-20T10:00",
+      }).note,
     ).toBeUndefined();
   });
 
@@ -50,9 +64,7 @@ describe("createViolationSchema", () => {
       occurredAt: "2026-07-20T10:00",
     });
 
-    expect(messages(result)).toContain(
-      "หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร",
-    );
+    expect(messages(result)).toContain("หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร");
   });
 });
 
@@ -76,21 +88,26 @@ describe("editViolationSchema", () => {
 
     expect(
       schema.parse({
+        categoryId: "category-parking",
         note: "  จอดกีดขวาง  ",
         occurredAt: "2026-07-20T10:00",
       }).note,
     ).toBe("จอดกีดขวาง");
     expect(
-      schema.parse({ note: "   ", occurredAt: "2026-07-20T10:00" }).note,
+      schema.parse({
+        categoryId: "category-parking",
+        note: "   ",
+        occurredAt: "2026-07-20T10:00",
+      }).note,
     ).toBeUndefined();
   });
 });
 
 describe("cancelViolationSchema", () => {
   it("trims a valid reason", () => {
-    expect(cancelViolationSchema.parse({ reason: "  บันทึกผิดบ้าน  " })).toEqual(
-      { reason: "บันทึกผิดบ้าน" },
-    );
+    expect(
+      cancelViolationSchema.parse({ reason: "  บันทึกผิดบ้าน  " }),
+    ).toEqual({ reason: "บันทึกผิดบ้าน" });
   });
 
   it.each(["ผิด", "ก".repeat(501)])(
@@ -136,12 +153,17 @@ describe("markFinePaidSchema", () => {
 
     expect(
       schema.parse({
+        categoryId: "category-parking",
         paidAt: "2026-07-20T09:00",
         reference: "  receipt-001  ",
       }).reference,
     ).toBe("receipt-001");
     expect(
-      schema.parse({ paidAt: "2026-07-20T09:00", reference: " " }).reference,
+      schema.parse({
+        categoryId: "category-parking",
+        paidAt: "2026-07-20T09:00",
+        reference: " ",
+      }).reference,
     ).toBeUndefined();
   });
 
@@ -151,8 +173,6 @@ describe("markFinePaidSchema", () => {
       reference: "x".repeat(129),
     });
 
-    expect(messages(result)).toContain(
-      "เลขอ้างอิงต้องไม่เกิน 128 ตัวอักษร",
-    );
+    expect(messages(result)).toContain("เลขอ้างอิงต้องไม่เกิน 128 ตัวอักษร");
   });
 });

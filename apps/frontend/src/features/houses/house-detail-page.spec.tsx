@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/api-error";
 import { parkingApi } from "@/lib/api/parking-api";
-import { makeCycle, makeHouseDetail, makeViolation } from "@/test/fixtures";
+import {
+  makeCycle,
+  makeHouseDetail,
+  makeViolation,
+  PET_CATEGORY,
+} from "@/test/fixtures";
 import { renderWithQueryClient } from "@/test/render";
 
 import { HouseDetailPage } from "./house-detail-page";
@@ -140,10 +145,44 @@ describe("HouseDetailPage", () => {
         .map((heading) => heading.textContent),
     ).toEqual(["ประวัติ Cycle", "Cycle 2", "Cycle 1"]);
     expect(
-      within(screen.getByRole("region", { name: "Cycle 2" })).getByRole(
-        "table",
-      ),
+      within(
+        screen.getByRole("region", { name: "จอดรถผิดระเบียบ Cycle 2" }),
+      ).getByRole("table"),
     ).toHaveClass("cycle-table");
+  });
+
+  it("summarizes each open category cycle separately", async () => {
+    vi.spyOn(parkingApi, "getHouse").mockResolvedValue(
+      makeHouseDetail({
+        cycles: [
+          ...house.cycles,
+          makeCycle({
+            category: PET_CATEGORY,
+            id: "cycle-pet",
+            pendingAmountBaht: 500,
+            pendingFineCount: 1,
+            violationCount: 3,
+          }),
+        ],
+      }),
+    );
+
+    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+
+    const summary = await screen.findByRole("region", { name: "สรุปบ้าน" });
+    const parking = within(summary).getByRole("region", {
+      name: "จอดรถผิดระเบียบ",
+    });
+    const pet = within(summary).getByRole("region", {
+      name: "สัตว์เลี้ยงขับถ่าย",
+    });
+    expect(within(parking).getByText("฿1,000")).toBeInTheDocument();
+    expect(within(pet).getByText("฿500")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("region", { name: "สัตว์เลี้ยงขับถ่าย Cycle 1" }),
+      ).getByText("สัตว์เลี้ยงขับถ่าย"),
+    ).toBeInTheDocument();
   });
 
   it("labels the fine rule each cycle uses", async () => {
@@ -153,13 +192,13 @@ describe("HouseDetailPage", () => {
 
     expect(
       within(
-        await screen.findByRole("region", { name: "Cycle 2" }),
+        await screen.findByRole("region", { name: "จอดรถผิดระเบียบ Cycle 2" }),
       ).getByText("กติกาใหม่: แจ้งเตือน 1 ครั้ง"),
     ).toBeInTheDocument();
     expect(
-      within(screen.getByRole("region", { name: "Cycle 1" })).getByText(
-        "กติกาเดิม: แจ้งเตือน 2 ครั้ง",
-      ),
+      within(
+        screen.getByRole("region", { name: "จอดรถผิดระเบียบ Cycle 1" }),
+      ).getByText("กติกาเดิม: แจ้งเตือน 2 ครั้ง"),
     ).toBeInTheDocument();
   });
 
@@ -167,7 +206,9 @@ describe("HouseDetailPage", () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
     renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
 
-    const cycle = await screen.findByRole("region", { name: "Cycle 2" });
+    const cycle = await screen.findByRole("region", {
+      name: "จอดรถผิดระเบียบ Cycle 2",
+    });
     const rows = within(cycle).getAllByRole("row").slice(1);
 
     expect(rows.map((row) => row.dataset.violationId)).toEqual([
@@ -410,7 +451,9 @@ describe("HouseDetailPage", () => {
     );
     expect(parkingApi.getHouse).toHaveBeenCalledTimes(2);
 
-    const cycle = screen.getByRole("region", { name: "Cycle 2" });
+    const cycle = screen.getByRole("region", {
+      name: "จอดรถผิดระเบียบ Cycle 2",
+    });
     const rows = within(cycle).getAllByRole("row").slice(1);
     expect(rows.map((row) => row.dataset.violationId)).toEqual([
       "violation-three",

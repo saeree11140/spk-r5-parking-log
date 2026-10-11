@@ -9,22 +9,38 @@ export interface DashboardMetrics {
   totalHouses: number;
 }
 
-export function getDashboardMetrics(
-  houses: HouseSummary[],
-): DashboardMetrics {
-  return houses.reduce<DashboardMetrics>(
-    (metrics, house) => ({
-      activeViolationHouseCount:
-        metrics.activeViolationHouseCount +
-        (house.currentCycle && house.currentCycle.violationCount > 0 ? 1 : 0),
-      pendingAmountBaht:
-        metrics.pendingAmountBaht +
-        (house.currentCycle?.pendingAmountBaht ?? 0),
-      pendingFineCount:
-        metrics.pendingFineCount +
-        (house.currentCycle?.pendingFineCount ?? 0),
-      totalHouses: metrics.totalHouses + 1,
+export interface CurrentActivity {
+  pendingAmountBaht: number;
+  pendingFineCount: number;
+  violationCount: number;
+}
+
+export function getCurrentActivity(house: HouseSummary): CurrentActivity {
+  return house.currentCycles.reduce<CurrentActivity>(
+    (total, cycle) => ({
+      pendingAmountBaht: total.pendingAmountBaht + cycle.pendingAmountBaht,
+      pendingFineCount: total.pendingFineCount + cycle.pendingFineCount,
+      violationCount: total.violationCount + cycle.violationCount,
     }),
+    { pendingAmountBaht: 0, pendingFineCount: 0, violationCount: 0 },
+  );
+}
+
+export function getDashboardMetrics(houses: HouseSummary[]): DashboardMetrics {
+  return houses.reduce<DashboardMetrics>(
+    (metrics, house) => {
+      const activity = getCurrentActivity(house);
+
+      return {
+        activeViolationHouseCount:
+          metrics.activeViolationHouseCount +
+          (activity.violationCount > 0 ? 1 : 0),
+        pendingAmountBaht:
+          metrics.pendingAmountBaht + activity.pendingAmountBaht,
+        pendingFineCount: metrics.pendingFineCount + activity.pendingFineCount,
+        totalHouses: metrics.totalHouses + 1,
+      };
+    },
     {
       activeViolationHouseCount: 0,
       pendingAmountBaht: 0,
@@ -37,11 +53,11 @@ export function getDashboardMetrics(
 function matchesFilter(house: HouseSummary, filter: HouseFilter): boolean {
   switch (filter) {
     case "ACTIVE_VIOLATIONS":
-      return (house.currentCycle?.violationCount ?? 0) > 0;
+      return getCurrentActivity(house).violationCount > 0;
     case "PENDING_FINE":
-      return (house.currentCycle?.pendingFineCount ?? 0) > 0;
+      return getCurrentActivity(house).pendingFineCount > 0;
     case "NO_CURRENT_ACTIVITY":
-      return house.currentCycle === null;
+      return house.currentCycles.length === 0;
     case "INACTIVE":
       return !house.isActive;
     case "ALL":

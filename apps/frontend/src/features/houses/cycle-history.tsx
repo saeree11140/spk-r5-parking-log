@@ -11,7 +11,10 @@ import { formatThaiDateTime } from "@/lib/date-time";
 interface CycleHistoryProps {
   cycles: CycleResponse[];
   onCancelViolation?: (violation: ViolationResponse) => void;
-  onEditViolation?: (violation: ViolationResponse) => void;
+  onEditViolation?: (
+    violation: ViolationResponse,
+    cycle: CycleResponse,
+  ) => void;
   onMarkPaid?: (violation: ViolationResponse) => void;
 }
 
@@ -34,9 +37,7 @@ const violationTones: Record<ViolationResponse["status"], StatusTone> = {
   WARNING: "info",
 };
 
-function orderViolations(
-  violations: ViolationResponse[],
-): ViolationResponse[] {
+function orderViolations(violations: ViolationResponse[]): ViolationResponse[] {
   return [...violations].sort((left, right) => {
     const leftCancelled = left.status === "CANCELLED";
     const rightCancelled = right.status === "CANCELLED";
@@ -55,7 +56,9 @@ export function CycleHistory({
   onMarkPaid,
 }: CycleHistoryProps) {
   const sortedCycles = [...cycles].sort(
-    (left, right) => right.cycleNumber - left.cycleNumber,
+    (left, right) =>
+      Date.parse(right.openedAt) - Date.parse(left.openedAt) ||
+      right.cycleNumber - left.cycleNumber,
   );
 
   return (
@@ -67,7 +70,7 @@ export function CycleHistory({
 
         return (
           <article
-            aria-label={`Cycle ${cycle.cycleNumber}`}
+            aria-label={`${cycle.category.name} Cycle ${cycle.cycleNumber}`}
             className="cycle-card"
             key={cycle.id}
             role="region"
@@ -75,6 +78,7 @@ export function CycleHistory({
             <header className="cycle-header">
               <div>
                 <h2>Cycle {cycle.cycleNumber}</h2>
+                <p className="cycle-category">{cycle.category.name}</p>
                 <p>
                   เปิด {formatThaiDateTime(cycle.openedAt)}
                   {cycle.closedAt
@@ -117,8 +121,7 @@ export function CycleHistory({
                 <tbody>
                   {orderViolations(cycle.violations).map((violation) => {
                     const canCancel =
-                      cancellationAllowed &&
-                      violation.status !== "CANCELLED";
+                      cancellationAllowed && violation.status !== "CANCELLED";
                     const canEdit =
                       cycle.status === "OPEN" &&
                       cycle.paidFineCount === 0 &&
@@ -128,10 +131,7 @@ export function CycleHistory({
                       violation.fine?.status === "PENDING";
 
                     return (
-                      <tr
-                        data-violation-id={violation.id}
-                        key={violation.id}
-                      >
+                      <tr data-violation-id={violation.id} key={violation.id}>
                         <td>{violation.sequenceNumber ?? "—"}</td>
                         <td>{formatThaiDateTime(violation.occurredAt)}</td>
                         <td>
@@ -178,7 +178,9 @@ export function CycleHistory({
                             {canEdit ? (
                               <Button
                                 aria-label={`แก้ไข Violation ครั้งที่ ${violation.sequenceNumber}`}
-                                onClick={() => onEditViolation?.(violation)}
+                                onClick={() =>
+                                  onEditViolation?.(violation, cycle)
+                                }
                                 variant="ghost"
                               >
                                 แก้ไข
@@ -187,9 +189,7 @@ export function CycleHistory({
                             {canCancel ? (
                               <Button
                                 aria-label={`ยกเลิก Violation ครั้งที่ ${violation.sequenceNumber}`}
-                                onClick={() =>
-                                  onCancelViolation?.(violation)
-                                }
+                                onClick={() => onCancelViolation?.(violation)}
                                 variant="ghost"
                               >
                                 ยกเลิก

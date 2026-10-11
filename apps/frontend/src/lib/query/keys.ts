@@ -9,6 +9,7 @@ export const queryKeys = {
   house: (houseCode: string) => ["house", houseCode] as const,
   houses: ["houses"] as const,
   users: userKeys.all,
+  violationCategories: ["violation-categories"] as const,
 };
 
 export async function invalidateParkingQueries(

@@ -36,11 +36,9 @@ function optionalTrimmedText(maximum: number, message: string) {
 
 function violationFields(now: Date) {
   return {
+    categoryId: z.string().min(1, "กรุณาเลือกหมวด"),
     occurredAt: localDateTimeSchema(now),
-    note: optionalTrimmedText(
-      1_000,
-      "หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร",
-    ),
+    note: optionalTrimmedText(1_000, "หมายเหตุต้องไม่เกิน 1,000 ตัวอักษร"),
   };
 }
 
@@ -70,10 +68,7 @@ export function markFinePaidSchema(occurredAt: string, now: Date) {
       (value) => !isBeforeViolation(value, occurredAt),
       { message: "เวลาชำระต้องไม่ก่อนเวลาเกิดเหตุ" },
     ),
-    reference: optionalTrimmedText(
-      128,
-      "เลขอ้างอิงต้องไม่เกิน 128 ตัวอักษร",
-    ),
+    reference: optionalTrimmedText(128, "เลขอ้างอิงต้องไม่เกิน 128 ตัวอักษร"),
   });
 }
 

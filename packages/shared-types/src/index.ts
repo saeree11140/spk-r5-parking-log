@@ -84,10 +84,17 @@ export interface ViolationResponse {
 
 export type FineRuleVersion = "V1" | "V2";
 
+export interface ViolationCategorySummary {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 export interface CycleSummary {
   id: string;
   cycleNumber: number;
   fineRuleVersion: FineRuleVersion;
+  category: ViolationCategorySummary;
   violationCount: number;
   pendingFineCount: number;
   pendingAmountBaht: number;
@@ -99,7 +106,7 @@ export interface HouseSummary {
   sequenceNumber: number;
   actualHouseNumber: string | null;
   isActive: boolean;
-  currentCycle: CycleSummary | null;
+  currentCycles: CycleSummary[];
 }
 
 export interface CycleResponse extends CycleSummary {
@@ -127,6 +134,7 @@ export interface HealthCheckResponse {
 }
 
 export interface CreateViolationInput {
+  categoryId: string;
   occurredAt: string;
   note?: string;
 }

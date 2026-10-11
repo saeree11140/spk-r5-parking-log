@@ -2,7 +2,7 @@
 
 import type { CreateViolationInput } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   type CreateViolationFormInput,
   type CreateViolationFormValues,
 } from "@/lib/forms/schemas";
-import { invalidateParkingQueries } from "@/lib/query/keys";
+import { invalidateParkingQueries, queryKeys } from "@/lib/query/keys";
 
 import { ViolationFormFields } from "./violation-form-fields";
 
@@ -35,12 +35,21 @@ export function CreateViolationModal({
   const now = new Date();
   const maximumOccurredAt = toDateTimeLocalValue(now);
   const schema = createViolationSchema(now);
+  const categoriesQuery = useQuery({
+    enabled: open,
+    queryFn: () => parkingApi.getViolationCategories(),
+    queryKey: queryKeys.violationCategories,
+  });
+  const activeCategories = categoriesQuery.data?.filter(
+    ({ isActive }) => isActive,
+  );
   const form = useForm<
     CreateViolationFormInput,
     unknown,
     CreateViolationFormValues
   >({
     defaultValues: {
+      categoryId: "",
       note: undefined,
       occurredAt: maximumOccurredAt,
     },
@@ -66,6 +75,7 @@ export function CreateViolationModal({
 
   const submitValues = form.handleSubmit((values) => {
     mutation.mutate({
+      categoryId: values.categoryId,
       occurredAt: localDateTimeToIso(values.occurredAt),
       ...(values.note ? { note: values.note } : {}),
     });
@@ -103,7 +113,20 @@ export function CreateViolationModal({
           form={form}
           pending={mutation.isPending}
           maximumOccurredAt={maximumOccurredAt}
+          category={{ kind: "select", options: activeCategories }}
         />
+        {categoriesQuery.isError ? (
+          <div className="form-error" role="alert">
+            <span>โหลดหมวดไม่สำเร็จ</span>
+            <Button
+              disabled={categoriesQuery.isFetching}
+              onClick={() => void categoriesQuery.refetch()}
+              variant="ghost"
+            >
+              ลองใหม่
+            </Button>
+          </div>
+        ) : null}
         {mutation.isError ? (
           <p className="form-error" role="alert">
             {mutation.error instanceof Error

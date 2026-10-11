@@ -2,6 +2,7 @@
 
 import type {
   UpdateViolationInput,
+  ViolationCategorySummary,
   ViolationResponse,
 } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +23,7 @@ import { invalidateParkingQueries } from "@/lib/query/keys";
 import { ViolationFormFields } from "./violation-form-fields";
 
 interface EditViolationModalProps {
+  category: ViolationCategorySummary;
   houseCode: string;
   onClose: () => void;
   onSuccess: (message: string) => void;
@@ -30,6 +32,7 @@ interface EditViolationModalProps {
 }
 
 export function EditViolationModal({
+  category,
   houseCode,
   onClose,
   onSuccess,
@@ -47,6 +50,7 @@ export function EditViolationModal({
     EditViolationFormValues
   >({
     defaultValues: {
+      categoryId: category.id,
       note: violation.note ?? "",
       occurredAt: initialOccurredAt,
     },
@@ -112,6 +116,7 @@ export function EditViolationModal({
           form={form}
           pending={mutation.isPending}
           maximumOccurredAt={maximumOccurredAt}
+          category={{ kind: "fixed", value: category }}
         />
         {mutation.isError ? (
           <p className="form-error" role="alert">

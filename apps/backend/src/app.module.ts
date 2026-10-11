@@ -12,6 +12,7 @@ import { HealthModule } from './health/health.module';
 import { HousesModule } from './houses/houses.module';
 import { PaymentsModule } from './payments/payments.module';
 import { UsersModule } from './users/users.module';
+import { ViolationCategoriesModule } from './violation-categories/violation-categories.module';
 import { ViolationsModule } from './violations/violations.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { ViolationsModule } from './violations/violations.module';
     HousesModule,
     UsersModule,
     ViolationsModule,
+    ViolationCategoriesModule,
     PaymentsModule,
   ],
   providers: [

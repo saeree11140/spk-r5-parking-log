@@ -4,6 +4,7 @@ import { PasswordService } from '../src/auth/password.service';
 import { seedAdmin } from '../src/database/admin-seed';
 import { requireDatabaseUrl } from '../src/database/environment';
 import { seedHouses } from '../src/database/house-seed';
+import { seedViolationCategories } from '../src/database/violation-category-seed';
 import { PrismaClient } from '../src/generated/prisma/client';
 
 function requireEnvironment(name: string): string {
@@ -27,6 +28,7 @@ async function main(): Promise<void> {
 
   try {
     await seedHouses(prisma);
+    await seedViolationCategories(prisma);
     await seedAdmin(prisma, admin, new PasswordService());
   } finally {
     await prisma.$disconnect();

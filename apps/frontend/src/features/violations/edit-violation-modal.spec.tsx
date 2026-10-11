@@ -40,7 +40,29 @@ const violation = makeViolation({
   sequenceNumber: 2,
 });
 
+const category = {
+  id: "category-parking",
+  isActive: true,
+  name: "จอดรถผิดระเบียบ",
+};
+
 describe("EditViolationModal", () => {
+  it("shows the category read-only", () => {
+    renderWithQueryClient(
+      <EditViolationModal
+        houseCode="R5-001"
+        onClose={() => undefined}
+        onSuccess={() => undefined}
+        open
+        category={category}
+        violation={violation}
+      />,
+    );
+
+    expect(screen.getByText("จอดรถผิดระเบียบ")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "หมวด" })).toBeNull();
+  });
+
   it("prefills the selected violation date, time and note", () => {
     renderWithQueryClient(
       <EditViolationModal
@@ -48,6 +70,7 @@ describe("EditViolationModal", () => {
         onClose={() => undefined}
         onSuccess={() => undefined}
         open
+        category={category}
         violation={violation}
       />,
     );
@@ -75,6 +98,7 @@ describe("EditViolationModal", () => {
         onClose={onClose}
         onSuccess={onSuccess}
         open
+        category={category}
         violation={violation}
       />,
       { queryClient },
@@ -123,6 +147,7 @@ describe("EditViolationModal", () => {
         onClose={() => undefined}
         onSuccess={() => undefined}
         open
+        category={category}
         violation={violation}
       />,
     );
@@ -155,6 +180,7 @@ describe("EditViolationModal", () => {
         onClose={() => undefined}
         onSuccess={() => undefined}
         open
+        category={category}
         violation={preciseViolation}
       />,
     );
@@ -188,6 +214,7 @@ describe("EditViolationModal", () => {
         onClose={onClose}
         onSuccess={() => undefined}
         open
+        category={category}
         violation={violation}
       />,
     );

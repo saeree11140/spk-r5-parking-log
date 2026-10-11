@@ -3,11 +3,15 @@ import {
   IsISO8601,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
 } from 'class-validator';
 
 export class CreateViolationDto {
+  @IsUUID()
+  categoryId!: string;
+
   @IsString()
   @IsISO8601({ strict: true })
   @Matches(/(Z|[+-]\d{2}:\d{2})$/)

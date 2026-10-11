@@ -22,9 +22,11 @@ export class HousesService {
       include: {
         cycles: {
           where: { status: 'OPEN' },
-          orderBy: { cycleNumber: 'desc' },
-          take: 1,
-          include: { violations: { include: { fine: true } } },
+          orderBy: [{ category: { createdAt: 'asc' } }, { categoryId: 'asc' }],
+          include: {
+            category: true,
+            violations: { include: { fine: true } },
+          },
         },
       },
     });
@@ -37,8 +39,11 @@ export class HousesService {
       where: { code },
       include: {
         cycles: {
-          orderBy: { cycleNumber: 'desc' },
-          include: { violations: { include: { fine: true } } },
+          orderBy: [{ openedAt: 'desc' }, { cycleNumber: 'desc' }],
+          include: {
+            category: true,
+            violations: { include: { fine: true } },
+          },
         },
       },
     });

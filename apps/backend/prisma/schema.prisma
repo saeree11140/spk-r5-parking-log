@@ -85,9 +85,22 @@ model House {
   @@map("houses")
 }
 
+model ViolationCategory {
+  id             String           @id @default(uuid()) @db.Uuid
+  name           String           @db.VarChar(100)
+  normalizedName String           @unique @map("normalized_name") @db.VarChar(100)
+  isActive       Boolean          @default(true) @map("is_active")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cycles         ViolationCycle[]
+
+  @@map("violation_categories")
+}
+
 model ViolationCycle {
   id              String             @id @default(uuid()) @db.Uuid
   houseId         String             @map("house_id") @db.Uuid
+  categoryId      String             @map("category_id") @db.Uuid
   cycleNumber     Int                @map("cycle_number")
   status          CycleStatus        @default(OPEN)
   fineRuleVersion FineRuleVersion    @default(V2) @map("fine_rule_version")
@@ -96,10 +109,12 @@ model ViolationCycle {
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   house           House              @relation(fields: [houseId], references: [id], onDelete: Restrict)
+  category        ViolationCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   violations      ParkingViolation[]
 
-  @@unique([houseId, cycleNumber])
+  @@unique([houseId, categoryId, cycleNumber])
   @@index([houseId])
+  @@index([categoryId])
   @@map("violation_cycles")
 }
 

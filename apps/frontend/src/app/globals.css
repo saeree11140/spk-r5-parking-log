@@ -706,6 +706,23 @@ tbody tr:hover {
   gap: 14px;
 }
 
+.house-summary-stack,
+.house-summary-category {
+  display: grid;
+  gap: 12px;
+}
+
+.house-summary-stack {
+  gap: 20px;
+}
+
+.house-summary-category h3 {
+  margin: 0;
+  font:
+    600 18px/1.3 var(--font-system),
+    sans-serif;
+}
+
 .house-summary-card {
   padding: 18px;
   background: var(--surface);
@@ -767,6 +784,11 @@ tbody tr:hover {
   margin-top: 6px;
   color: var(--muted);
   font-size: 15px;
+}
+
+.cycle-header .cycle-category {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .cycle-totals {

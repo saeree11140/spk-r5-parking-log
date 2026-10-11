@@ -33,9 +33,21 @@ describe("parkingApi", () => {
     expect(apiClient.get).toHaveBeenCalledWith("/houses/R5-001");
   });
 
+  it("lists violation categories", async () => {
+    const data = [{ id: "category-parking", isActive: true, name: "จอดรถ" }];
+    vi.spyOn(apiClient, "get").mockResolvedValue({ data });
+
+    await expect(parkingApi.getViolationCategories()).resolves.toBe(data);
+    expect(apiClient.get).toHaveBeenCalledWith("/violation-categories");
+  });
+
   it("creates a violation with the API payload", async () => {
     const data = {} as ViolationMutationResponse;
-    const input = { note: "กีดขวาง", occurredAt: "2026-07-01T03:00:00.000Z" };
+    const input = {
+      categoryId: "category-parking",
+      note: "กีดขวาง",
+      occurredAt: "2026-07-01T03:00:00.000Z",
+    };
     vi.spyOn(apiClient, "post").mockResolvedValue({ data });
 
     await expect(parkingApi.createViolation("R5-001", input)).resolves.toBe(

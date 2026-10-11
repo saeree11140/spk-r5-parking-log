@@ -3,6 +3,7 @@ import type { Response } from 'supertest';
 import type {
   HouseDetail,
   HouseSummary,
+  ViolationCategorySummary,
   ViolationResponse,
 } from '@spk-r5-parking-log/shared-types';
 
@@ -18,6 +19,7 @@ interface MutationBody {
     pendingFineCount: number;
     pendingAmountBaht: number;
     fineRuleVersion: 'V1' | 'V2';
+    category: ViolationCategorySummary;
   };
 }
 
@@ -34,6 +36,8 @@ interface ErrorBody {
 }
 
 const HOUSE_CODE = 'R5-164';
+const PARKING_CATEGORY = 'จอดรถผิดระเบียบ';
+const PET_CATEGORY = 'ปล่อยสัตว์เลี้ยงขับถ่ายในพื้นที่ส่วนกลางแล้วไม่เก็บ';
 const occurredAt = [
   '2026-07-01T10:00:00+07:00',
   '2026-07-02T10:00:00+07:00',
@@ -50,11 +54,23 @@ describe('Core parking API (e2e)', () => {
   const harness = createAuthTestHarness();
   let prisma: PrismaService;
   let auth: LoggedInAgent;
+  let parkingId: string;
+  let petId: string;
 
   beforeAll(async () => {
     await harness.start();
     prisma = harness.prisma;
     auth = await harness.login(await harness.createUser('STAFF'));
+    const categories = bodyAs<ViolationCategorySummary[]>(
+      await auth.agent.get('/api/violation-categories').expect(200),
+    );
+    const categoryId = (name: string) => {
+      const category = categories.find((item) => item.name === name);
+      if (!category) throw new Error(`Missing seeded category ${name}`);
+      return category.id;
+    };
+    parkingId = categoryId(PARKING_CATEGORY);
+    petId = categoryId(PET_CATEGORY);
   });
 
   beforeEach(async () => resetHouse());
@@ -100,9 +116,16 @@ describe('Core parking API (e2e)', () => {
     await prisma.violationCycle.deleteMany({ where: { houseId: house.id } });
   }
 
-  async function createViolation(index: number): Promise<Response> {
+  async function createViolation(
+    index: number,
+    categoryId = parkingId,
+  ): Promise<Response> {
     return mutation(`/api/houses/${HOUSE_CODE}/violations`)
-      .send({ occurredAt: occurredAt[index], note: `violation ${index + 1}` })
+      .send({
+        categoryId,
+        occurredAt: occurredAt[index],
+        note: `violation ${index + 1}`,
+      })
       .expect(201);
   }
 
@@ -136,6 +159,136 @@ describe('Core parking API (e2e)', () => {
     expect(houses[0]?.code).toBe('R5-001');
     expect(houses[163]?.code).toBe(HOUSE_CODE);
     expect(houses[163]).not.toHaveProperty('cycles');
+    expect(houses[163]?.currentCycles).toEqual([]);
+  });
+
+  it('lists the seeded violation categories', async () => {
+    const categories = bodyAs<ViolationCategorySummary[]>(
+      await auth.agent.get('/api/violation-categories').expect(200),
+    );
+
+    expect(categories).toEqual(
+      expect.arrayContaining([
+        { id: parkingId, name: PARKING_CATEGORY, isActive: true },
+        { id: petId, name: PET_CATEGORY, isActive: true },
+      ]),
+    );
+  });
+
+  it('counts each category separately for the same house', async () => {
+    const parkingFirst = bodyAs<MutationBody>(await createViolation(0));
+    const petFirst = bodyAs<MutationBody>(await createViolation(1, petId));
+    const parkingSecond = bodyAs<MutationBody>(await createViolation(2));
+
+    expect(parkingFirst.violation).toMatchObject({
+      sequenceNumber: 1,
+      status: 'WARNING',
+      fine: null,
+    });
+    expect(petFirst.violation).toMatchObject({
+      sequenceNumber: 1,
+      status: 'WARNING',
+      fine: null,
+    });
+    expect(petFirst.currentCycle.category).toEqual({
+      id: petId,
+      name: PET_CATEGORY,
+      isActive: true,
+    });
+    expect(parkingSecond.violation.fine?.amountBaht).toBe(1000);
+    expect(parkingSecond.currentCycle.category.id).toBe(parkingId);
+
+    const houses = bodyAs<HouseSummary[]>(
+      await auth.agent.get('/api/houses').expect(200),
+    );
+    const house = houses.find(({ code }) => code === HOUSE_CODE);
+    expect(
+      house?.currentCycles.map(
+        ({ category, violationCount, pendingAmountBaht }) => ({
+          categoryId: category.id,
+          violationCount,
+          pendingAmountBaht,
+        }),
+      ),
+    ).toEqual([
+      { categoryId: parkingId, violationCount: 2, pendingAmountBaht: 1000 },
+      { categoryId: petId, violationCount: 1, pendingAmountBaht: 0 },
+    ]);
+  });
+
+  it('closes only the paid category cycle and keeps backdating other categories', async () => {
+    await createViolation(0, petId);
+    await createViolation(1);
+    const parkingFined = bodyAs<MutationBody>(await createViolation(2));
+
+    const paid = bodyAs<PaidBody>(
+      await mutation(
+        `/api/houses/${HOUSE_CODE}/violations/${parkingFined.violation.id}/mark-paid`,
+      )
+        .send({ paidAt: '2026-07-06T10:00:00+07:00' })
+        .expect(200),
+    );
+    expect(paid.cycleClosed).toBe(true);
+
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    expect(
+      detail.cycles.map(({ category, status }) => ({
+        categoryId: category.id,
+        status,
+      })),
+    ).toEqual(
+      expect.arrayContaining([
+        { categoryId: parkingId, status: 'CLOSED' },
+        { categoryId: petId, status: 'OPEN' },
+      ]),
+    );
+
+    const petBackdated = bodyAs<MutationBody>(
+      await mutation(`/api/houses/${HOUSE_CODE}/violations`)
+        .send({ categoryId: petId, occurredAt: '2026-06-30T10:00:00+07:00' })
+        .expect(201),
+    );
+    expect(petBackdated.violation.sequenceNumber).toBe(1);
+    expect(petBackdated.currentCycle.violationCount).toBe(2);
+
+    const parkingNext = bodyAs<MutationBody>(
+      await mutation(`/api/houses/${HOUSE_CODE}/violations`)
+        .send({
+          categoryId: parkingId,
+          occurredAt: '2026-07-09T10:00:00+07:00',
+        })
+        .expect(201),
+    );
+    expect(parkingNext.currentCycle.cycleNumber).toBe(2);
+    expect(parkingNext.violation.sequenceNumber).toBe(1);
+  });
+
+  it('requires an existing category to create a violation', async () => {
+    const missing = await mutation(`/api/houses/${HOUSE_CODE}/violations`)
+      .send({ occurredAt: occurredAt[0] })
+      .expect(400);
+    expect(bodyAs<ErrorBody>(missing).code).toBe('VALIDATION_ERROR');
+
+    const unknown = await mutation(`/api/houses/${HOUSE_CODE}/violations`)
+      .send({
+        categoryId: '7a4b3c2d-1e0f-4a1b-8c2d-3e4f5a6b7c8d',
+        occurredAt: occurredAt[0],
+      })
+      .expect(404);
+    expect(bodyAs<ErrorBody>(unknown).code).toBe('CATEGORY_NOT_FOUND');
+  });
+
+  it('does not allow changing the category of a violation', async () => {
+    const created = bodyAs<MutationBody>(await createViolation(0));
+
+    const response = await patch(
+      `/api/houses/${HOUSE_CODE}/violations/${created.violation.id}`,
+    )
+      .send({ occurredAt: occurredAt[0], categoryId: petId })
+      .expect(400);
+    expect(bodyAs<ErrorBody>(response).code).toBe('VALIDATION_ERROR');
   });
 
   async function openV1Cycle(): Promise<void> {
@@ -143,7 +296,12 @@ describe('Core parking API (e2e)', () => {
       where: { code: HOUSE_CODE },
     });
     await prisma.violationCycle.create({
-      data: { houseId: house.id, cycleNumber: 1, fineRuleVersion: 'V1' },
+      data: {
+        houseId: house.id,
+        categoryId: parkingId,
+        cycleNumber: 1,
+        fineRuleVersion: 'V1',
+      },
     });
   }
 
@@ -226,12 +384,18 @@ describe('Core parking API (e2e)', () => {
 
     const first = bodyAs<MutationBody>(
       await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-        .send({ occurredAt: '2026-07-09T10:00:00+07:00' })
+        .send({
+          categoryId: parkingId,
+          occurredAt: '2026-07-09T10:00:00+07:00',
+        })
         .expect(201),
     );
     const second = bodyAs<MutationBody>(
       await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-        .send({ occurredAt: '2026-07-10T10:00:00+07:00' })
+        .send({
+          categoryId: parkingId,
+          occurredAt: '2026-07-10T10:00:00+07:00',
+        })
         .expect(201),
     );
     expect(second.currentCycle).toMatchObject({
@@ -262,7 +426,10 @@ describe('Core parking API (e2e)', () => {
 
     const next = bodyAs<MutationBody>(
       await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-        .send({ occurredAt: '2026-07-11T10:00:00+07:00' })
+        .send({
+          categoryId: parkingId,
+          occurredAt: '2026-07-11T10:00:00+07:00',
+        })
         .expect(201),
     );
     expect(next.currentCycle.cycleNumber).toBe(2);
@@ -271,11 +438,11 @@ describe('Core parking API (e2e)', () => {
 
   it('allows backdate and cancel before paid then recalculates fines', async () => {
     await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-      .send({ occurredAt: occurredAt[1] })
+      .send({ categoryId: parkingId, occurredAt: occurredAt[1] })
       .expect(201);
     const backdated = bodyAs<MutationBody>(
       await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-        .send({ occurredAt: occurredAt[0] })
+        .send({ categoryId: parkingId, occurredAt: occurredAt[0] })
         .expect(201),
     );
     expect(backdated.violation.sequenceNumber).toBe(1);
@@ -511,7 +678,7 @@ describe('Core parking API (e2e)', () => {
     const backdateResponse = await mutation(
       `/api/houses/${HOUSE_CODE}/violations`,
     )
-      .send({ occurredAt: '2026-06-30T10:00:00+07:00' })
+      .send({ categoryId: parkingId, occurredAt: '2026-06-30T10:00:00+07:00' })
       .expect(409);
     expect(bodyAs<ErrorBody>(backdateResponse).code).toBe(
       'BACKDATE_NOT_ALLOWED',
@@ -521,7 +688,7 @@ describe('Core parking API (e2e)', () => {
 
   it('rejects invalid and unknown fields with stable validation envelope', async () => {
     const response = await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-      .send({ occurredAt: 'invalid', amountBaht: 1 })
+      .send({ categoryId: parkingId, occurredAt: 'invalid', amountBaht: 1 })
       .expect(400);
     const body = bodyAs<ErrorBody>(response);
 
@@ -533,6 +700,7 @@ describe('Core parking API (e2e)', () => {
     const responses = await Promise.all(
       occurredAt.slice(0, 4).map((timestamp) =>
         mutation(`/api/houses/${HOUSE_CODE}/violations`).send({
+          categoryId: parkingId,
           occurredAt: timestamp,
         }),
       ),

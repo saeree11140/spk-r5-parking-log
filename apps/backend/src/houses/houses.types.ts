@@ -6,7 +6,10 @@ import type {
   HouseSummary,
   ViolationResponse,
   FineRuleVersion,
+  ViolationCategorySummary,
 } from '@spk-r5-parking-log/shared-types';
+
+import { mapCategory } from '../violation-categories/violation-categories.types';
 
 interface FineRecord {
   id: string;
@@ -31,6 +34,7 @@ interface CycleRecord {
   id: string;
   cycleNumber: number;
   fineRuleVersion: FineRuleVersion;
+  category: ViolationCategorySummary;
   status: 'OPEN' | 'CLOSED';
   openedAt: Date;
   closedAt: Date | null;
@@ -82,6 +86,7 @@ export function summarizeCycle(cycle: CycleRecord): CycleSummary {
     id: cycle.id,
     cycleNumber: cycle.cycleNumber,
     fineRuleVersion: cycle.fineRuleVersion,
+    category: mapCategory(cycle.category),
     violationCount: activeViolations.length,
     pendingFineCount: pendingFines.length,
     pendingAmountBaht: pendingFines.reduce(
@@ -92,15 +97,15 @@ export function summarizeCycle(cycle: CycleRecord): CycleSummary {
 }
 
 export function mapHouseSummary(house: HouseRecord): HouseSummary {
-  const currentCycle = house.cycles.find(({ status }) => status === 'OPEN');
-
   return {
     id: house.id,
     code: house.code,
     sequenceNumber: house.sequenceNumber,
     actualHouseNumber: house.actualHouseNumber,
     isActive: house.isActive,
-    currentCycle: currentCycle ? summarizeCycle(currentCycle) : null,
+    currentCycles: house.cycles
+      .filter(({ status }) => status === 'OPEN')
+      .map(summarizeCycle),
   };
 }
 
@@ -149,7 +154,11 @@ export function mapHouseDetail(house: HouseRecord): HouseDetail {
     actualHouseNumber: house.actualHouseNumber,
     isActive: house.isActive,
     cycles: [...house.cycles]
-      .sort((left, right) => right.cycleNumber - left.cycleNumber)
+      .sort(
+        (left, right) =>
+          right.openedAt.getTime() - left.openedAt.getTime() ||
+          right.cycleNumber - left.cycleNumber,
+      )
       .map(mapCycle),
   };
 }

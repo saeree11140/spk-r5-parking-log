@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/api-error";
 import { parkingApi } from "@/lib/api/parking-api";
 import { useDashboardStore } from "@/stores/dashboard-store";
-import { makeHouseSummary } from "@/test/fixtures";
+import { makeCycleSummary, makeHouseSummary } from "@/test/fixtures";
 import { renderWithQueryClient } from "@/test/render";
 
 import { DashboardPage } from "./dashboard-page";
@@ -14,35 +14,39 @@ const houses = [
   makeHouseSummary({
     actualHouseNumber: "99/1",
     code: "R5-001",
-    currentCycle: null,
+    currentCycles: [],
     id: "house-001",
     sequenceNumber: 1,
   }),
   makeHouseSummary({
     actualHouseNumber: "99/2",
     code: "R5-002",
-    currentCycle: {
-      cycleNumber: 1,
-      fineRuleVersion: "V2",
-      id: "cycle-002",
-      pendingAmountBaht: 1_000,
-      pendingFineCount: 1,
-      violationCount: 3,
-    },
+    currentCycles: [
+      makeCycleSummary({
+        cycleNumber: 1,
+        fineRuleVersion: "V2",
+        id: "cycle-002",
+        pendingAmountBaht: 1_000,
+        pendingFineCount: 1,
+        violationCount: 3,
+      }),
+    ],
     id: "house-002",
     sequenceNumber: 2,
   }),
   makeHouseSummary({
     actualHouseNumber: "99/164",
     code: "R5-164",
-    currentCycle: {
-      cycleNumber: 1,
-      fineRuleVersion: "V2",
-      id: "cycle-164",
-      pendingAmountBaht: 500,
-      pendingFineCount: 1,
-      violationCount: 4,
-    },
+    currentCycles: [
+      makeCycleSummary({
+        cycleNumber: 1,
+        fineRuleVersion: "V2",
+        id: "cycle-164",
+        pendingAmountBaht: 500,
+        pendingFineCount: 1,
+        violationCount: 4,
+      }),
+    ],
     id: "house-164",
     sequenceNumber: 164,
   }),
@@ -86,11 +90,7 @@ describe("DashboardPage", () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouses")
       .mockRejectedValueOnce(
-        new ApiError(
-          "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
-          "NETWORK_ERROR",
-          null,
-        ),
+        new ApiError("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "NETWORK_ERROR", null),
       )
       .mockResolvedValueOnce(houses);
 
@@ -136,9 +136,7 @@ describe("DashboardPage", () => {
     renderWithQueryClient(<DashboardPage />);
     await screen.findByText("บ้านทั้งหมด");
 
-    await user.click(
-      screen.getByRole("button", { name: "รีเฟรชข้อมูลบ้าน" }),
-    );
+    await user.click(screen.getByRole("button", { name: "รีเฟรชข้อมูลบ้าน" }));
 
     expect(parkingApi.getHouses).toHaveBeenCalledTimes(2);
   });

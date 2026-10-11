@@ -43,7 +43,23 @@ export class ViolationsService {
         throw new DomainError(409, 'HOUSE_INACTIVE', 'House is inactive');
       }
 
-      const cycle = await this.findOrCreateOpenCycle(tx, house.id, occurredAt);
+      const category = await tx.violationCategory.findUnique({
+        where: { id: dto.categoryId },
+      });
+      if (!category) {
+        throw new DomainError(
+          404,
+          'CATEGORY_NOT_FOUND',
+          'Violation category not found',
+        );
+      }
+
+      const cycle = await this.findOrCreateOpenCycle(
+        tx,
+        house.id,
+        category.id,
+        occurredAt,
+      );
       await this.assertBackdateAllowed(tx, cycle.id, occurredAt);
 
       const sequence = await tx.parkingViolation.aggregate({
@@ -69,6 +85,7 @@ export class ViolationsService {
         null,
         {
           cycleId: cycle.id,
+          categoryId: category.id,
           occurredAt: occurredAt.toISOString(),
           note: dto.note ?? null,
         },
@@ -232,15 +249,16 @@ export class ViolationsService {
   private async findOrCreateOpenCycle(
     tx: Prisma.TransactionClient,
     houseId: string,
+    categoryId: string,
     occurredAt: Date,
   ) {
     const openCycle = await tx.violationCycle.findFirst({
-      where: { houseId, status: 'OPEN' },
+      where: { houseId, categoryId, status: 'OPEN' },
     });
     if (openCycle) return openCycle;
 
     const latestCycle = await tx.violationCycle.findFirst({
-      where: { houseId },
+      where: { houseId, categoryId },
       orderBy: { cycleNumber: 'desc' },
       include: {
         violations: {
@@ -269,6 +287,7 @@ export class ViolationsService {
     return tx.violationCycle.create({
       data: {
         houseId,
+        categoryId,
         cycleNumber: (latestCycle?.cycleNumber ?? 0) + 1,
         status: 'OPEN',
         fineRuleVersion: CURRENT_FINE_RULE_VERSION,
@@ -315,7 +334,10 @@ export class ViolationsService {
       }),
       tx.violationCycle.findUniqueOrThrow({
         where: { id: cycleId },
-        include: { violations: { include: { fine: true } } },
+        include: {
+          category: true,
+          violations: { include: { fine: true } },
+        },
       }),
     ]);
 

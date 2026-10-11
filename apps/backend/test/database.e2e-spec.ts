@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 
 import { DatabaseModule } from '../src/database/database.module';
 import { seedHouses } from '../src/database/house-seed';
+import { seedViolationCategories } from '../src/database/violation-category-seed';
 import { PrismaService } from '../src/database/prisma.service';
 
 describe('Database and house seed (e2e)', () => {
@@ -31,7 +32,7 @@ describe('Database and house seed (e2e)', () => {
       SELECT indexname
       FROM pg_indexes
       WHERE schemaname = 'public'
-        AND indexname = 'violation_cycles_one_open_per_house'
+        AND indexname = 'violation_cycles_one_open_per_house_category'
     `;
     const constraints = await prisma.$queryRaw<Array<{ conname: string }>>`
       SELECT conname
@@ -53,10 +54,33 @@ describe('Database and house seed (e2e)', () => {
     `;
 
     expect(indexes).toEqual([
-      { indexname: 'violation_cycles_one_open_per_house' },
+      { indexname: 'violation_cycles_one_open_per_house_category' },
     ]);
     expect(constraints).toHaveLength(6);
     expect(legacyTables).toEqual([]);
+  });
+
+  it('seeds the default violation categories idempotently', async () => {
+    await seedViolationCategories(prisma);
+    await seedViolationCategories(prisma);
+
+    const categories = await prisma.violationCategory.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { name: true, isActive: true },
+    });
+
+    expect(categories).toEqual(
+      expect.arrayContaining([
+        { name: 'จอดรถผิดระเบียบ', isActive: true },
+        {
+          name: 'ปล่อยสัตว์เลี้ยงขับถ่ายในพื้นที่ส่วนกลางแล้วไม่เก็บ',
+          isActive: true,
+        },
+      ]),
+    );
+    expect(
+      categories.filter(({ name }) => name === 'จอดรถผิดระเบียบ'),
+    ).toHaveLength(1);
   });
 
   it('seeds 164 unique ordered houses', async () => {

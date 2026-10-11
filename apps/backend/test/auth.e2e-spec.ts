@@ -86,11 +86,17 @@ describe('Authentication and authorization (e2e)', () => {
   it('allows STAFF parking mutation but denies user management', async () => {
     const staff = await harness.createUser('STAFF');
     const auth = await harness.login(staff);
+    const category = await harness.prisma.violationCategory.findFirstOrThrow({
+      where: { name: 'จอดรถผิดระเบียบ' },
+    });
     const response = await auth.agent
       .post('/api/houses/R5-163/violations')
       .set('Origin', harness.frontendUrl)
       .set('X-CSRF-Token', auth.csrf)
-      .send({ occurredAt: '2026-07-31T10:00:00+07:00' })
+      .send({
+        categoryId: category.id,
+        occurredAt: '2026-07-31T10:00:00+07:00',
+      })
       .expect(201);
 
     await auth.agent.get('/api/users').expect(403);

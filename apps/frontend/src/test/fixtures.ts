@@ -1,10 +1,24 @@
 import type {
   AuthUser,
   CycleResponse,
+  CycleSummary,
   HouseDetail,
   HouseSummary,
+  ViolationCategorySummary,
   ViolationResponse,
 } from "@spk-r5-parking-log/shared-types";
+
+export const PARKING_CATEGORY: ViolationCategorySummary = {
+  id: "category-parking",
+  isActive: true,
+  name: "จอดรถผิดระเบียบ",
+};
+
+export const PET_CATEGORY: ViolationCategorySummary = {
+  id: "category-pet",
+  isActive: true,
+  name: "สัตว์เลี้ยงขับถ่าย",
+};
 
 export function makeAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
   return {
@@ -24,7 +38,7 @@ export function makeHouseSummary(
   return {
     actualHouseNumber: "99/1",
     code: "R5-001",
-    currentCycle: null,
+    currentCycles: [],
     id: "house-001",
     isActive: true,
     sequenceNumber: 1,
@@ -48,10 +62,26 @@ export function makeViolation(
   };
 }
 
+export function makeCycleSummary(
+  overrides: Partial<CycleSummary> = {},
+): CycleSummary {
+  return {
+    category: PARKING_CATEGORY,
+    cycleNumber: 1,
+    fineRuleVersion: "V2",
+    id: "cycle-001",
+    pendingAmountBaht: 0,
+    pendingFineCount: 0,
+    violationCount: 0,
+    ...overrides,
+  };
+}
+
 export function makeCycle(
   overrides: Partial<CycleResponse> = {},
 ): CycleResponse {
   return {
+    category: PARKING_CATEGORY,
     closedAt: null,
     cycleNumber: 1,
     fineRuleVersion: "V2",

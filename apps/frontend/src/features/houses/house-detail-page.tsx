@@ -1,6 +1,9 @@
 "use client";
 
-import type { ViolationResponse } from "@spk-r5-parking-log/shared-types";
+import type {
+  ViolationCategorySummary,
+  ViolationResponse,
+} from "@spk-r5-parking-log/shared-types";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -27,7 +30,11 @@ import { HouseSummary } from "./house-summary";
 type ActiveDialog =
   | { type: "create" }
   | { type: "cancel"; violation: ViolationResponse }
-  | { type: "edit"; violation: ViolationResponse }
+  | {
+      type: "edit";
+      category: ViolationCategorySummary;
+      violation: ViolationResponse;
+    }
   | { type: "markPaid"; violation: ViolationResponse }
   | null;
 
@@ -63,10 +70,7 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
   }
 
   const house = houseQuery.data;
-  const currentCycle =
-    [...house.cycles]
-      .sort((left, right) => right.cycleNumber - left.cycleNumber)
-      .find((cycle) => cycle.status === "OPEN") ?? null;
+  const currentCycles = house.cycles.filter((cycle) => cycle.status === "OPEN");
 
   return (
     <div className="page-stack">
@@ -109,10 +113,8 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
           ) : null}
         </div>
       </header>
-      {successMessage ? (
-        <SuccessNotice>{successMessage}</SuccessNotice>
-      ) : null}
-      <HouseSummary currentCycle={currentCycle} />
+      {successMessage ? <SuccessNotice>{successMessage}</SuccessNotice> : null}
+      <HouseSummary currentCycles={currentCycles} />
       {house.cycles.length === 0 ? (
         <EmptyState
           description="เมื่อบันทึก Violation ครั้งแรก ระบบจะสร้าง Cycle ให้อัตโนมัติ"
@@ -125,9 +127,13 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
             setSuccessMessage(null);
             setActiveDialog({ type: "cancel", violation });
           }}
-          onEditViolation={(violation) => {
+          onEditViolation={(violation, cycle) => {
             setSuccessMessage(null);
-            setActiveDialog({ type: "edit", violation });
+            setActiveDialog({
+              type: "edit",
+              category: cycle.category,
+              violation,
+            });
           }}
           onMarkPaid={(violation) => {
             setSuccessMessage(null);
@@ -152,6 +158,7 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
       ) : null}
       {activeDialog?.type === "edit" ? (
         <EditViolationModal
+          category={activeDialog.category}
           houseCode={houseCode}
           onClose={() => setActiveDialog(null)}
           onSuccess={setSuccessMessage}

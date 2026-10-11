@@ -1,3 +1,4 @@
+import type { ViolationCategorySummary } from "@spk-r5-parking-log/shared-types";
 import { Controller, type UseFormReturn } from "react-hook-form";
 
 import { DateTimePickerField } from "@/components/ui/date-time-picker";
@@ -14,15 +15,49 @@ interface ViolationFormFieldsProps {
   >;
   pending: boolean;
   maximumOccurredAt: string;
+  category:
+    | { kind: "select"; options: ViolationCategorySummary[] | undefined }
+    | { kind: "fixed"; value: ViolationCategorySummary };
 }
 
 export function ViolationFormFields({
   form,
   pending,
   maximumOccurredAt,
+  category,
 }: ViolationFormFieldsProps) {
   return (
     <>
+      {category.kind === "select" ? (
+        <label className="select-field">
+          <span>หมวด</span>
+          <select
+            disabled={pending || category.options === undefined}
+            {...form.register("categoryId")}
+          >
+            <option value="">
+              {category.options === undefined
+                ? "กำลังโหลดหมวด..."
+                : "เลือกหมวด"}
+            </option>
+            {category.options?.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+          {form.formState.errors.categoryId ? (
+            <small className="field-error">
+              {form.formState.errors.categoryId.message}
+            </small>
+          ) : null}
+        </label>
+      ) : (
+        <div className="form-field">
+          <span>หมวด</span>
+          <strong>{category.value.name}</strong>
+        </div>
+      )}
       <Controller
         control={form.control}
         name="occurredAt"

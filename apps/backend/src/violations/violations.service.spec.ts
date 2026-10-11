@@ -7,6 +7,7 @@ import { UpdateViolationDto } from './update-violation.dto';
 import { ViolationsService } from './violations.service';
 
 const occurredAt = '2026-07-18T10:00:00+07:00';
+const CATEGORY = { id: 'category-1', name: 'จอดรถผิดระเบียบ', isActive: true };
 
 function prismaFor(tx: object): PrismaService {
   return {
@@ -22,7 +23,11 @@ describe('ViolationsService.create', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+      service.create(
+        'R5-001',
+        { categoryId: 'category-1', occurredAt },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(404, 'HOUSE_NOT_FOUND', 'House not found'),
     );
@@ -39,7 +44,11 @@ describe('ViolationsService.create', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+      service.create(
+        'R5-001',
+        { categoryId: 'category-1', occurredAt },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(409, 'HOUSE_INACTIVE', 'House is inactive'),
     );
@@ -52,12 +61,16 @@ describe('ViolationsService.create', () => {
           .fn()
           .mockResolvedValue({ id: 'house-1', isActive: true }),
       },
+      violationCategory: {
+        findUnique: jest.fn().mockResolvedValue(CATEGORY),
+      },
       violationCycle: {
         findFirst: jest
           .fn()
           .mockResolvedValueOnce(null)
           .mockResolvedValueOnce({
             cycleNumber: 1,
+            category: CATEGORY,
             closedAt: new Date('2026-07-19T00:00:00Z'),
             violations: [{ occurredAt: new Date('2026-07-19T04:00:00Z') }],
           }),
@@ -66,7 +79,11 @@ describe('ViolationsService.create', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+      service.create(
+        'R5-001',
+        { categoryId: 'category-1', occurredAt },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(
         409,
@@ -105,12 +122,14 @@ describe('ViolationsService.create', () => {
       .mockResolvedValueOnce({
         id: 'cycle-1',
         cycleNumber: 1,
+        category: CATEGORY,
         closedAt: new Date('2026-08-17T01:51:29Z'),
         violations: [{ occurredAt: new Date(latestViolationAt) }],
       });
     const createCycle = jest.fn().mockResolvedValue({
       id: 'cycle-2',
       cycleNumber: 2,
+      category: CATEGORY,
       fineRuleVersion: 'V2',
       status: 'OPEN',
     });
@@ -120,12 +139,16 @@ describe('ViolationsService.create', () => {
           .fn()
           .mockResolvedValue({ id: 'house-1', isActive: true }),
       },
+      violationCategory: {
+        findUnique: jest.fn().mockResolvedValue(CATEGORY),
+      },
       violationCycle: {
         findFirst: findCycle,
         create: createCycle,
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'cycle-2',
           cycleNumber: 2,
+          category: CATEGORY,
           fineRuleVersion: 'V2',
           status: 'OPEN',
           violations: [violation],
@@ -151,13 +174,18 @@ describe('ViolationsService.create', () => {
 
     const result = await service.create(
       'R5-026',
-      { occurredAt: nextOccurredAt, note: 'ผิดระเบียบครั้งที่ 1' },
+      {
+        categoryId: 'category-1',
+        occurredAt: nextOccurredAt,
+        note: 'ผิดระเบียบครั้งที่ 1',
+      },
       SYSTEM_ACTOR,
     );
 
     expect(createCycle).toHaveBeenCalledWith({
       data: {
         houseId: 'house-1',
+        categoryId: 'category-1',
         cycleNumber: 2,
         status: 'OPEN',
         fineRuleVersion: 'V2',
@@ -165,7 +193,7 @@ describe('ViolationsService.create', () => {
       },
     });
     expect(findCycle).toHaveBeenNthCalledWith(2, {
-      where: { houseId: 'house-1' },
+      where: { houseId: 'house-1', categoryId: 'category-1' },
       orderBy: { cycleNumber: 'desc' },
       include: {
         violations: {
@@ -189,6 +217,9 @@ describe('ViolationsService.create', () => {
           .fn()
           .mockResolvedValue({ id: 'house-1', isActive: true }),
       },
+      violationCategory: {
+        findUnique: jest.fn().mockResolvedValue(CATEGORY),
+      },
       violationCycle: {
         findFirst: jest.fn().mockResolvedValue({ id: 'cycle-1' }),
       },
@@ -202,7 +233,11 @@ describe('ViolationsService.create', () => {
     const service = new ViolationsService(prismaFor(tx));
 
     await expect(
-      service.create('R5-001', { occurredAt }, SYSTEM_ACTOR),
+      service.create(
+        'R5-001',
+        { categoryId: 'category-1', occurredAt },
+        SYSTEM_ACTOR,
+      ),
     ).rejects.toEqual(
       new DomainError(
         409,
@@ -233,11 +268,15 @@ describe('ViolationsService.create', () => {
           .fn()
           .mockResolvedValue({ id: 'house-1', isActive: true }),
       },
+      violationCategory: {
+        findUnique: jest.fn().mockResolvedValue(CATEGORY),
+      },
       violationCycle: {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({
           id: 'cycle-1',
           cycleNumber: 1,
+          category: CATEGORY,
           fineRuleVersion: 'V2',
           status: 'OPEN',
         }),
@@ -245,6 +284,7 @@ describe('ViolationsService.create', () => {
           id: 'cycle-1',
           fineRuleVersion: 'V2',
           cycleNumber: 1,
+          category: CATEGORY,
           status: 'OPEN',
           violations: [violation],
         }),
@@ -267,7 +307,11 @@ describe('ViolationsService.create', () => {
     };
     const service = new ViolationsService(prismaFor(tx));
 
-    const result = await service.create('R5-001', { occurredAt }, SYSTEM_ACTOR);
+    const result = await service.create(
+      'R5-001',
+      { categoryId: 'category-1', occurredAt },
+      SYSTEM_ACTOR,
+    );
 
     expect(createViolation).toHaveBeenCalledWith({
       data: {
@@ -416,6 +460,7 @@ describe('ViolationsService.cancel', () => {
           id: 'cycle-1',
           fineRuleVersion: 'V2',
           cycleNumber: 1,
+          category: CATEGORY,
           violations: [cancelled],
         }),
       },
@@ -472,6 +517,7 @@ describe('ViolationsService.update', () => {
       cycle: {
         id: 'cycle-1',
         cycleNumber: 1,
+        category: CATEGORY,
         status: 'OPEN',
         fineRuleVersion: 'V2',
         openedAt: new Date('2026-07-01T00:00:00Z'),

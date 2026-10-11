@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 
+import { getCurrentActivity } from "./dashboard-selectors";
 import { formatBaht } from "./dashboard-summary";
 
 export function HouseTable({ houses }: { houses: HouseSummary[] }) {
@@ -23,33 +24,35 @@ export function HouseTable({ houses }: { houses: HouseSummary[] }) {
             </tr>
           </thead>
           <tbody>
-            {houses.map((house) => (
-              <tr key={house.id}>
-                <td>
-                  <span className="house-code">{house.code}</span>
-                </td>
-                <td>{house.actualHouseNumber ?? "—"}</td>
-                <td>{house.currentCycle?.violationCount ?? 0}</td>
-                <td>{house.currentCycle?.pendingFineCount ?? 0}</td>
-                <td>
-                  {formatBaht(house.currentCycle?.pendingAmountBaht ?? 0)}
-                </td>
-                <td>
-                  <StatusBadge tone={house.isActive ? "success" : "neutral"}>
-                    {house.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                  </StatusBadge>
-                </td>
-                <td>
-                  <Link
-                    className="detail-link"
-                    href={`/houses/${house.code}`}
-                  >
-                    ดูรายละเอียด
-                    <ArrowUpRight aria-hidden="true" size={16} />
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {houses.map((house) => {
+              const activity = getCurrentActivity(house);
+
+              return (
+                <tr key={house.id}>
+                  <td>
+                    <span className="house-code">{house.code}</span>
+                  </td>
+                  <td>{house.actualHouseNumber ?? "—"}</td>
+                  <td>{activity.violationCount}</td>
+                  <td>{activity.pendingFineCount}</td>
+                  <td>{formatBaht(activity.pendingAmountBaht)}</td>
+                  <td>
+                    <StatusBadge tone={house.isActive ? "success" : "neutral"}>
+                      {house.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                    </StatusBadge>
+                  </td>
+                  <td>
+                    <Link
+                      className="detail-link"
+                      href={`/houses/${house.code}`}
+                    >
+                      ดูรายละเอียด
+                      <ArrowUpRight aria-hidden="true" size={16} />
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
