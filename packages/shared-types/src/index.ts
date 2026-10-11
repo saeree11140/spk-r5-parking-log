@@ -90,6 +90,10 @@ export interface ViolationCategorySummary {
   isActive: boolean;
 }
 
+export interface ViolationCategoryInput {
+  name: string;
+}
+
 export interface CycleSummary {
   id: string;
   cycleNumber: number;

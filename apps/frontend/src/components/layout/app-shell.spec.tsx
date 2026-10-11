@@ -57,6 +57,21 @@ describe("AppShell", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows violation category management to staff", () => {
+    useAuthStore.setState({
+      status: "authenticated",
+      user: makeAuthUser({ role: "STAFF" }),
+    });
+
+    renderWithQueryClient(<AppShell>content</AppShell>);
+
+    expect(
+      screen
+        .getAllByRole("link", { name: "หมวดการกระทำผิด" })
+        .every((link) => link.getAttribute("href") === "/violation-categories"),
+    ).toBe(true);
+  });
+
   it("links the house directory navigation to its own route", () => {
     useAuthStore.setState({
       status: "authenticated",

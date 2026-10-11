@@ -53,6 +53,13 @@ export class ViolationsService {
           'Violation category not found',
         );
       }
+      if (!category.isActive) {
+        throw new DomainError(
+          409,
+          'CATEGORY_INACTIVE',
+          'Violation category is inactive',
+        );
+      }
 
       const cycle = await this.findOrCreateOpenCycle(
         tx,

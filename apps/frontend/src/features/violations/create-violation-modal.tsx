@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { ApiError } from "@/lib/api/api-error";
 import { parkingApi } from "@/lib/api/parking-api";
 import { localDateTimeToIso, toDateTimeLocalValue } from "@/lib/date-time";
 import {
@@ -63,6 +64,14 @@ export function CreateViolationModal({
       form.reset();
       onSuccess("บันทึก Violation แล้ว");
       onClose();
+    },
+    onError: async (error) => {
+      if (error instanceof ApiError && error.code === "CATEGORY_INACTIVE") {
+        form.setValue("categoryId", "");
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.violationCategories,
+        });
+      }
     },
   });
 
@@ -129,9 +138,12 @@ export function CreateViolationModal({
         ) : null}
         {mutation.isError ? (
           <p className="form-error" role="alert">
-            {mutation.error instanceof Error
-              ? mutation.error.message
-              : "เกิดข้อผิดพลาด กรุณาลองใหม่"}
+            {mutation.error instanceof ApiError &&
+            mutation.error.code === "CATEGORY_INACTIVE"
+              ? "หมวดนี้ถูกปิดใช้งานแล้ว กรุณาเลือกหมวดอื่น"
+              : mutation.error instanceof Error
+                ? mutation.error.message
+                : "เกิดข้อผิดพลาด กรุณาลองใหม่"}
           </p>
         ) : null}
       </form>

@@ -1,3 +1,4 @@
 export function normalizeCategoryName(name: string): string {
-  return name.trim().toLocaleLowerCase('th');
+  // NFKC folds visually identical spellings (e.g. Thai SARA AM) together.
+  return name.normalize('NFKC').trim().toLocaleLowerCase('th');
 }

@@ -82,6 +82,41 @@ describe("CreateViolationModal", () => {
     expect(screen.getByLabelText("หมวด")).toBeEnabled();
   });
 
+  it("explains a category deactivated meanwhile and reloads the list", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(parkingApi, "createViolation").mockRejectedValue(
+      new ApiError("Violation category is inactive", "CATEGORY_INACTIVE", 409),
+    );
+    renderWithQueryClient(
+      <CreateViolationModal
+        houseCode="R5-001"
+        onClose={() => undefined}
+        onSuccess={() => undefined}
+        open
+      />,
+    );
+    const select = await screen.findByLabelText("หมวด");
+    await user.selectOptions(
+      select,
+      await screen.findByRole("option", { name: "จอดรถผิดระเบียบ" }),
+    );
+    vi.mocked(parkingApi.getViolationCategories).mockResolvedValue([
+      { id: "category-pet", isActive: true, name: "สัตว์เลี้ยงขับถ่าย" },
+    ]);
+
+    await user.click(screen.getByRole("button", { name: "บันทึก Violation" }));
+
+    expect(
+      await screen.findByText("หมวดนี้ถูกปิดใช้งานแล้ว กรุณาเลือกหมวดอื่น"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("option", { name: "จอดรถผิดระเบียบ" }),
+      ).toBeNull(),
+    );
+    expect(select).toHaveValue("");
+  });
+
   it("validates future time and an overlong note", async () => {
     const user = userEvent.setup();
     renderWithQueryClient(

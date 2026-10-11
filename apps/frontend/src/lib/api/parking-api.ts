@@ -6,6 +6,7 @@ import type {
   MarkFinePaidInput,
   MarkFinePaidResponse,
   UpdateViolationInput,
+  ViolationCategoryInput,
   ViolationCategorySummary,
   ViolationMutationResponse,
 } from "@spk-r5-parking-log/shared-types";
@@ -32,6 +33,45 @@ export const parkingApi = {
   async getViolationCategories(): Promise<ViolationCategorySummary[]> {
     const response = await apiClient.get<ViolationCategorySummary[]>(
       "/violation-categories",
+    );
+    return response.data;
+  },
+
+  async createViolationCategory(
+    input: ViolationCategoryInput,
+  ): Promise<ViolationCategorySummary> {
+    const response = await apiClient.post<ViolationCategorySummary>(
+      "/violation-categories",
+      input,
+    );
+    return response.data;
+  },
+
+  async renameViolationCategory(
+    categoryId: string,
+    input: ViolationCategoryInput,
+  ): Promise<ViolationCategorySummary> {
+    const response = await apiClient.patch<ViolationCategorySummary>(
+      `/violation-categories/${encodePath(categoryId)}`,
+      input,
+    );
+    return response.data;
+  },
+
+  async activateViolationCategory(
+    categoryId: string,
+  ): Promise<ViolationCategorySummary> {
+    const response = await apiClient.post<ViolationCategorySummary>(
+      `/violation-categories/${encodePath(categoryId)}/activate`,
+    );
+    return response.data;
+  },
+
+  async deactivateViolationCategory(
+    categoryId: string,
+  ): Promise<ViolationCategorySummary> {
+    const response = await apiClient.post<ViolationCategorySummary>(
+      `/violation-categories/${encodePath(categoryId)}/deactivate`,
     );
     return response.data;
   },

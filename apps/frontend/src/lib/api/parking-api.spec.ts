@@ -41,6 +41,35 @@ describe("parkingApi", () => {
     expect(apiClient.get).toHaveBeenCalledWith("/violation-categories");
   });
 
+  it("manages violation categories", async () => {
+    const data = { id: "category/1", isActive: true, name: "เสียงดัง" };
+    vi.spyOn(apiClient, "post").mockResolvedValue({ data });
+    vi.spyOn(apiClient, "patch").mockResolvedValue({ data });
+
+    await expect(
+      parkingApi.createViolationCategory({ name: "เสียงดัง" }),
+    ).resolves.toBe(data);
+    await parkingApi.renameViolationCategory("category/1", { name: "ดัง" });
+    await parkingApi.deactivateViolationCategory("category/1");
+    await parkingApi.activateViolationCategory("category/1");
+
+    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/violation-categories", {
+      name: "เสียงดัง",
+    });
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      "/violation-categories/category%2F1",
+      { name: "ดัง" },
+    );
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      2,
+      "/violation-categories/category%2F1/deactivate",
+    );
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      3,
+      "/violation-categories/category%2F1/activate",
+    );
+  });
+
   it("creates a violation with the API payload", async () => {
     const data = {} as ViolationMutationResponse;
     const input = {

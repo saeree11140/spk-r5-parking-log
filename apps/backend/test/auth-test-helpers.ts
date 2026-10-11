@@ -182,7 +182,7 @@ class AuthTestHarness {
     return typeof header === 'string' ? [header] : [];
   }
 
-  private async cleanupParkingHouse(houseCode: string): Promise<void> {
+  async cleanupParkingHouse(houseCode: string): Promise<void> {
     if (!this.prisma) return;
     const house = await this.prisma.house.findUnique({
       where: { code: houseCode },

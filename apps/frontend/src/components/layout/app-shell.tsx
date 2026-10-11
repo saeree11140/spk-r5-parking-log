@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   House,
+  Tags,
   LayoutDashboard,
   LogOut,
   PanelLeftClose,
@@ -22,7 +23,18 @@ import { useDashboardStore } from "@/stores/dashboard-store";
 const navigation = [
   { href: "/", icon: LayoutDashboard, label: "ภาพรวม" },
   { href: "/houses", icon: House, label: "รายชื่อบ้าน" },
+  {
+    href: "/violation-categories",
+    icon: Tags,
+    label: "หมวดการกระทำผิด",
+  },
 ];
+
+function isActiveRoute(pathname: string, href: string): boolean {
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -56,11 +68,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
         </div>
         <nav aria-label="เมนูหลัก" className="sidebar-nav">
-          {navigation.map(({ href, icon: Icon, label }, index) => {
-            const active =
-              index === 0
-                ? pathname === "/"
-                : pathname === "/houses" || pathname.startsWith("/houses/");
+          {navigation.map(({ href, icon: Icon, label }) => {
+            const active = isActiveRoute(pathname, href);
             return (
               <Link
                 key={label}
@@ -130,6 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <strong>SPK R5 Parking Log</strong>
         </Link>
         <nav aria-label="เมนูมือถือ">
+          <Link href="/violation-categories">หมวดการกระทำผิด</Link>
           {user?.role === "ADMIN" ? <Link href="/users">ผู้ใช้งาน</Link> : null}
           <Button
             aria-label="ออกจากระบบ"

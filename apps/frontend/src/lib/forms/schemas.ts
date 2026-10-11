@@ -50,6 +50,25 @@ export function editViolationSchema(now: Date) {
   return z.object(violationFields(now));
 }
 
+export const violationCategoryNameSchema = z.object({
+  name: z
+    .string()
+    .transform((value) => value.trim())
+    .pipe(
+      z
+        .string()
+        .min(1, "กรุณาระบุชื่อหมวด")
+        .max(100, "ชื่อหมวดต้องไม่เกิน 100 ตัวอักษร"),
+    ),
+});
+
+export type ViolationCategoryNameFormInput = z.input<
+  typeof violationCategoryNameSchema
+>;
+export type ViolationCategoryNameFormValues = z.infer<
+  typeof violationCategoryNameSchema
+>;
+
 export const cancelViolationSchema = z.object({
   reason: z
     .string()
