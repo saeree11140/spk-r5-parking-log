@@ -8,6 +8,7 @@ import { type AuditActor, writeAudit } from '../audit/audit-log';
 import { parsePastDateTime } from '../common/date-time';
 import { DomainError } from '../common/domain-error';
 import { runSerializable } from '../common/serializable-transaction';
+import { findOpenCycleViolation } from '../parking/find-open-cycle-violation';
 import { PrismaService } from '../database/prisma.service';
 import { mapFine, mapViolation } from '../houses/houses.types';
 import type { MarkFinePaidDto } from './mark-fine-paid.dto';
@@ -31,20 +32,11 @@ export class PaymentsService {
     const paidAt = parsePastDateTime(dto.paidAt, new Date());
 
     return runSerializable(this.prisma, async (tx) => {
-      const violation = await tx.parkingViolation.findFirst({
-        where: { id: violationId, cycle: { house: { code: houseCode } } },
-        include: { cycle: true, fine: true },
-      });
-      if (!violation) {
-        throw new DomainError(
-          404,
-          'VIOLATION_NOT_FOUND',
-          'Violation not found',
-        );
-      }
-      if (violation.cycle.status !== 'OPEN') {
-        throw new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed');
-      }
+      const violation = await findOpenCycleViolation(
+        tx,
+        houseCode,
+        violationId,
+      );
       if (!violation.fine) {
         throw new DomainError(404, 'FINE_NOT_FOUND', 'Fine not found');
       }

@@ -6,10 +6,9 @@ import type {
 } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
-import { DateTimePickerField } from "@/components/ui/date-time-picker";
 import { Modal } from "@/components/ui/modal";
 import { parkingApi } from "@/lib/api/parking-api";
 import { localDateTimeToIso, toDateTimeLocalValue } from "@/lib/date-time";
@@ -19,6 +18,8 @@ import {
   type EditViolationFormValues,
 } from "@/lib/forms/schemas";
 import { invalidateParkingQueries } from "@/lib/query/keys";
+
+import { ViolationFormFields } from "./violation-form-fields";
 
 interface EditViolationModalProps {
   houseCode: string;
@@ -107,37 +108,11 @@ export function EditViolationModal({
         id="edit-violation-form"
         onSubmit={submitValues}
       >
-        <Controller
-          control={form.control}
-          name="occurredAt"
-          render={({ field, fieldState }) => (
-            <DateTimePickerField
-              ref={field.ref}
-              disabled={mutation.isPending}
-              error={fieldState.error?.message}
-              label="วันเวลาเกิดเหตุ"
-              maxValue={maximumOccurredAt}
-              name={field.name}
-              onBlur={field.onBlur}
-              onChange={field.onChange}
-              value={field.value}
-            />
-          )}
+        <ViolationFormFields
+          form={form}
+          pending={mutation.isPending}
+          maximumOccurredAt={maximumOccurredAt}
         />
-        <label className="form-field">
-          <span>หมายเหตุ</span>
-          <textarea
-            maxLength={1_001}
-            placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"
-            rows={4}
-            {...form.register("note")}
-          />
-          {form.formState.errors.note ? (
-            <small className="field-error">
-              {form.formState.errors.note.message}
-            </small>
-          ) : null}
-        </label>
         {mutation.isError ? (
           <p className="form-error" role="alert">
             {mutation.error instanceof Error

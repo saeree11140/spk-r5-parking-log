@@ -14,6 +14,8 @@ import {
 } from "@/lib/forms/user-schemas";
 import { userKeys } from "@/lib/query/keys";
 
+import { TemporaryPasswordField } from "./temporary-password-field";
+
 export function ResetPasswordModal({
   onClose,
   open,
@@ -69,19 +71,10 @@ export function ResetPasswordModal({
         <p className="confirmation-copy">
           ผู้ใช้นี้ต้องเปลี่ยนรหัสผ่านอีกครั้งเมื่อเข้าสู่ระบบ
         </p>
-        <label className="form-field">
-          <span>รหัสผ่านชั่วคราว</span>
-          <input
-            autoComplete="new-password"
-            type="password"
-            {...form.register("temporaryPassword")}
-          />
-          {form.formState.errors.temporaryPassword ? (
-            <small className="field-error">
-              {form.formState.errors.temporaryPassword.message}
-            </small>
-          ) : null}
-        </label>
+        <TemporaryPasswordField
+          registration={form.register("temporaryPassword")}
+          error={form.formState.errors.temporaryPassword?.message}
+        />
         {mutation.isError ? (
           <p className="form-error" role="alert">
             {mutation.error instanceof Error

@@ -8,6 +8,7 @@ import { type AuditActor, writeAudit } from '../audit/audit-log';
 import { parsePastDateTime } from '../common/date-time';
 import { DomainError } from '../common/domain-error';
 import { runSerializable } from '../common/serializable-transaction';
+import { findOpenCycleViolation } from '../parking/find-open-cycle-violation';
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import { mapViolation, summarizeCycle } from '../houses/houses.types';
@@ -84,20 +85,11 @@ export class ViolationsService {
     actor: AuditActor,
   ): Promise<ViolationMutationResponse> {
     return runSerializable(this.prisma, async (tx) => {
-      const violation = await tx.parkingViolation.findFirst({
-        where: { id: violationId, cycle: { house: { code: houseCode } } },
-        include: { cycle: true, fine: true },
-      });
-      if (!violation) {
-        throw new DomainError(
-          404,
-          'VIOLATION_NOT_FOUND',
-          'Violation not found',
-        );
-      }
-      if (violation.cycle.status !== 'OPEN') {
-        throw new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed');
-      }
+      const violation = await findOpenCycleViolation(
+        tx,
+        houseCode,
+        violationId,
+      );
       if (violation.status === 'CANCELLED') {
         throw new DomainError(
           409,
@@ -183,20 +175,11 @@ export class ViolationsService {
     const occurredAt = parsePastDateTime(dto.occurredAt, new Date());
 
     return runSerializable(this.prisma, async (tx) => {
-      const violation = await tx.parkingViolation.findFirst({
-        where: { id: violationId, cycle: { house: { code: houseCode } } },
-        include: { cycle: true, fine: true },
-      });
-      if (!violation) {
-        throw new DomainError(
-          404,
-          'VIOLATION_NOT_FOUND',
-          'Violation not found',
-        );
-      }
-      if (violation.cycle.status !== 'OPEN') {
-        throw new DomainError(409, 'CYCLE_CLOSED', 'Cycle is closed');
-      }
+      const violation = await findOpenCycleViolation(
+        tx,
+        houseCode,
+        violationId,
+      );
       if (violation.status === 'CANCELLED') {
         throw new DomainError(
           409,

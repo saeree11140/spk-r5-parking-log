@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Chakra_Petch, IBM_Plex_Sans_Thai } from "next/font/google";
+import { IBM_Plex_Sans_Thai } from "next/font/google";
 
 import { AuthGate } from "@/features/auth/auth-gate";
 import { ADMIN_ROBOTS_METADATA } from "@/lib/admin-metadata";
@@ -10,12 +10,6 @@ import "./globals.css";
 const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   subsets: ["latin", "thai"],
   variable: "--font-body",
-  weight: ["400", "500", "600", "700"],
-});
-
-const chakraPetch = Chakra_Petch({
-  subsets: ["latin", "thai"],
-  variable: "--font-system",
   weight: ["400", "500", "600", "700"],
 });
 
@@ -31,10 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      className={`${ibmPlexSansThai.variable} ${chakraPetch.variable}`}
-      lang="th"
-    >
+    <html className={ibmPlexSansThai.variable} lang="th">
       <body>
         <Providers>
           <AuthGate>{children}</AuthGate>
