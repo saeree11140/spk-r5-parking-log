@@ -1,5 +1,6 @@
 import { type AuditActor, writeAudit } from '../audit/audit-log';
 import type { Prisma } from '../generated/prisma/client';
+import type { FineRuleVersion } from '../generated/prisma/enums';
 import {
   buildSequencePlan,
   type SequencePlanItem,
@@ -11,11 +12,11 @@ function fineAuditState(fine: { amountBaht: number; status: string }) {
 
 export async function resequenceCycle(
   tx: Prisma.TransactionClient,
-  cycleId: string,
+  cycle: { id: string; fineRuleVersion: FineRuleVersion },
   actor: AuditActor,
 ): Promise<SequencePlanItem[]> {
   const violations = await tx.parkingViolation.findMany({
-    where: { cycleId, status: { not: 'CANCELLED' } },
+    where: { cycleId: cycle.id, status: { not: 'CANCELLED' } },
     orderBy: [{ occurredAt: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     include: { fine: true },
   });
@@ -31,7 +32,10 @@ export async function resequenceCycle(
     });
   }
 
-  const plan = buildSequencePlan(violations.map(({ id }) => id));
+  const plan = buildSequencePlan(
+    cycle.fineRuleVersion,
+    violations.map(({ id }) => id),
+  );
   for (const item of plan) {
     const before = violations.find(({ id }) => id === item.id);
     if (!before) continue;

@@ -82,9 +82,12 @@ export interface ViolationResponse {
   fine: FineResponse | null;
 }
 
+export type FineRuleVersion = "V1" | "V2";
+
 export interface CycleSummary {
   id: string;
   cycleNumber: number;
+  fineRuleVersion: FineRuleVersion;
   violationCount: number;
   pendingFineCount: number;
   pendingAmountBaht: number;

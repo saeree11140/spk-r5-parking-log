@@ -26,6 +26,7 @@ const house = makeHouseDetail({
     makeCycle({
       closedAt: "2026-06-10T03:00:00.000Z",
       cycleNumber: 1,
+      fineRuleVersion: "V1",
       id: "cycle-001",
       status: "CLOSED",
       violationCount: 1,
@@ -143,6 +144,23 @@ describe("HouseDetailPage", () => {
         "table",
       ),
     ).toHaveClass("cycle-table");
+  });
+
+  it("labels the fine rule each cycle uses", async () => {
+    vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
+
+    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+
+    expect(
+      within(
+        await screen.findByRole("region", { name: "Cycle 2" }),
+      ).getByText("กติกาใหม่: แจ้งเตือน 1 ครั้ง"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Cycle 1" })).getByText(
+        "กติกาเดิม: แจ้งเตือน 2 ครั้ง",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("orders active violations by sequence and cancelled records last", async () => {

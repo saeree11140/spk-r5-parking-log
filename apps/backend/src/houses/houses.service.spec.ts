@@ -15,6 +15,7 @@ function houseRecord() {
       {
         id: 'cycle-1',
         cycleNumber: 1,
+        fineRuleVersion: 'V1' as const,
         status: 'OPEN' as const,
         openedAt: date,
         closedAt: null,
@@ -88,6 +89,7 @@ describe('HousesService', () => {
         currentCycle: {
           id: 'cycle-1',
           cycleNumber: 1,
+          fineRuleVersion: 'V1',
           violationCount: 2,
           pendingFineCount: 1,
           pendingAmountBaht: 1000,

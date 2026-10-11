@@ -17,6 +17,7 @@ interface MutationBody {
     violationCount: number;
     pendingFineCount: number;
     pendingAmountBaht: number;
+    fineRuleVersion: 'V1' | 'V2';
   };
 }
 
@@ -137,7 +138,16 @@ describe('Core parking API (e2e)', () => {
     expect(houses[163]).not.toHaveProperty('cycles');
   });
 
-  it('creates sequence 1-5 with fines 0,0,1000,500,500 and total 2000', async () => {
+  async function openV1Cycle(): Promise<void> {
+    const house = await prisma.house.findUniqueOrThrow({
+      where: { code: HOUSE_CODE },
+    });
+    await prisma.violationCycle.create({
+      data: { houseId: house.id, cycleNumber: 1, fineRuleVersion: 'V1' },
+    });
+  }
+
+  it('creates sequence 1-5 in a new V2 cycle with fines 0,1000,500,500,500 and total 2500', async () => {
     const created = await createFive();
 
     expect(created.map(({ violation }) => violation.sequenceNumber)).toEqual([
@@ -145,26 +155,103 @@ describe('Core parking API (e2e)', () => {
     ]);
     expect(
       created.map(({ violation }) => violation.fine?.amountBaht ?? 0),
-    ).toEqual([0, 0, 1000, 500, 500]);
+    ).toEqual([0, 1000, 500, 500, 500]);
+    expect(created[0]?.currentCycle.fineRuleVersion).toBe('V2');
 
     const detailResponse = await auth.agent
       .get(`/api/houses/${HOUSE_CODE}`)
       .expect(200);
     const detail = bodyAs<HouseDetail>(detailResponse);
-    expect(detail.cycles[0]?.totalFineAmountBaht).toBe(2000);
-    expect(detail.cycles[0]?.pendingFineCount).toBe(3);
+    expect(detail.cycles[0]?.fineRuleVersion).toBe('V2');
+    expect(detail.cycles[0]?.totalFineAmountBaht).toBe(2500);
+    expect(detail.cycles[0]?.pendingFineCount).toBe(4);
+  });
+
+  it('keeps an open V1 cycle on the original fines 0,0,1000', async () => {
+    await openV1Cycle();
+
+    const created = [
+      bodyAs<MutationBody>(await createViolation(0)),
+      bodyAs<MutationBody>(await createViolation(1)),
+      bodyAs<MutationBody>(await createViolation(2)),
+    ];
+
+    expect(
+      created.map(({ violation }) => violation.fine?.amountBaht ?? 0),
+    ).toEqual([0, 0, 1000]);
+    expect(created[2]?.currentCycle.fineRuleVersion).toBe('V1');
+  });
+
+  it('resequences a V1 cycle with V1 fines after a cancel', async () => {
+    await openV1Cycle();
+    await createViolation(0);
+    const second = bodyAs<MutationBody>(await createViolation(1));
+    const third = bodyAs<MutationBody>(await createViolation(2));
+    expect(third.violation.fine?.amountBaht).toBe(1000);
+
+    await mutation(
+      `/api/houses/${HOUSE_CODE}/violations/${second.violation.id}/cancel`,
+    )
+      .send({ reason: 'บันทึกผิด' })
+      .expect(200);
+
+    const detail = bodyAs<HouseDetail>(
+      await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
+    );
+    const resequenced = detail.cycles[0]?.violations.find(
+      ({ id }) => id === third.violation.id,
+    );
+    expect(resequenced).toMatchObject({
+      sequenceNumber: 2,
+      status: 'WARNING',
+      fine: { amountBaht: 0, status: 'CANCELLED' },
+    });
+    expect(detail.cycles[0]?.pendingAmountBaht).toBe(0);
+  });
+
+  it('opens a V2 cycle after a V1 cycle closes', async () => {
+    await openV1Cycle();
+    await createViolation(0);
+    await createViolation(1);
+    const fined = bodyAs<MutationBody>(await createViolation(2));
+
+    const paid = bodyAs<PaidBody>(
+      await mutation(
+        `/api/houses/${HOUSE_CODE}/violations/${fined.violation.id}/mark-paid`,
+      )
+        .send({ paidAt: '2026-07-06T10:00:00+07:00' })
+        .expect(200),
+    );
+    expect(paid.cycleClosed).toBe(true);
+
+    const first = bodyAs<MutationBody>(
+      await mutation(`/api/houses/${HOUSE_CODE}/violations`)
+        .send({ occurredAt: '2026-07-09T10:00:00+07:00' })
+        .expect(201),
+    );
+    const second = bodyAs<MutationBody>(
+      await mutation(`/api/houses/${HOUSE_CODE}/violations`)
+        .send({ occurredAt: '2026-07-10T10:00:00+07:00' })
+        .expect(201),
+    );
+    expect(second.currentCycle).toMatchObject({
+      cycleNumber: 2,
+      fineRuleVersion: 'V2',
+    });
+    expect(first.violation.fine).toBeNull();
+    expect(second.violation.fine?.amountBaht).toBe(1000);
   });
 
   it('marks fines independently, closes on final fine, then opens cycle two', async () => {
     const created = await createFive();
-    const fined = created.slice(2);
+    const fined = created.slice(1);
 
     for (let index = 0; index < fined.length; index += 1) {
       const response = await mutation(
         `/api/houses/${HOUSE_CODE}/violations/${fined[index]?.violation.id}/mark-paid`,
       )
         .send({
-          paidAt: `2026-07-0${6 + index}T10:00:00+07:00`,
+          paidAt: `2026-07-${String(6 + index).padStart(2, '0')}T10:00:00+07:00`,
           reference: `receipt-${index + 1}`,
         })
         .expect(200);
@@ -175,7 +262,7 @@ describe('Core parking API (e2e)', () => {
 
     const next = bodyAs<MutationBody>(
       await mutation(`/api/houses/${HOUSE_CODE}/violations`)
-        .send({ occurredAt: '2026-07-09T10:00:00+07:00' })
+        .send({ occurredAt: '2026-07-11T10:00:00+07:00' })
         .expect(201),
     );
     expect(next.currentCycle.cycleNumber).toBe(2);
@@ -203,12 +290,16 @@ describe('Core parking API (e2e)', () => {
     );
     expect(cancelled.violation.status).toBe('CANCELLED');
     expect(cancelled.currentCycle.violationCount).toBe(2);
-    expect(third.violation.fine?.amountBaht).toBe(1000);
+    expect(third.violation.fine?.amountBaht).toBe(500);
 
     const detail = bodyAs<HouseDetail>(
       await auth.agent.get(`/api/houses/${HOUSE_CODE}`).expect(200),
     );
-    expect(detail.cycles[0]?.pendingAmountBaht).toBe(0);
+    expect(
+      detail.cycles[0]?.violations.find(({ id }) => id === third.violation.id)
+        ?.fine?.amountBaht,
+    ).toBe(1000);
+    expect(detail.cycles[0]?.pendingAmountBaht).toBe(1000);
   });
 
   it('edits a violation, reorders its cycle, recalculates fines, and persists the result', async () => {
@@ -239,8 +330,8 @@ describe('Core parking API (e2e)', () => {
     });
     expect(updated.currentCycle).toMatchObject({
       violationCount: 3,
-      pendingFineCount: 1,
-      pendingAmountBaht: 1000,
+      pendingFineCount: 2,
+      pendingAmountBaht: 1500,
     });
 
     const detail = bodyAs<HouseDetail>(
@@ -272,9 +363,9 @@ describe('Core parking API (e2e)', () => {
         id: violations[0].violation.id,
         sequenceNumber: 2,
         occurredAt: new Date(occurredAt[0]).toISOString(),
-        status: 'WARNING',
+        status: 'PENDING_FINE',
         note: 'violation 1',
-        fine: null,
+        fine: { status: 'PENDING', amountBaht: 1000 },
       },
       {
         id: violations[1].violation.id,
@@ -282,7 +373,7 @@ describe('Core parking API (e2e)', () => {
         occurredAt: new Date(occurredAt[1]).toISOString(),
         status: 'PENDING_FINE',
         note: 'violation 2',
-        fine: { status: 'PENDING', amountBaht: 1000 },
+        fine: { status: 'PENDING', amountBaht: 500 },
       },
     ]);
 
@@ -299,12 +390,12 @@ describe('Core parking API (e2e)', () => {
     expect(cancelledFineAudits).toEqual([
       expect.objectContaining({
         after: { amountBaht: 0, status: 'CANCELLED' },
-        before: { amountBaht: 1000, status: 'PENDING' },
+        before: { amountBaht: 500, status: 'PENDING' },
       }),
     ]);
 
     const pendingFine = detail.cycles[0]?.violations.find(
-      ({ id }) => id === violations[1].violation.id,
+      ({ id }) => id === violations[0].violation.id,
     )?.fine;
     expect(pendingFine).not.toBeNull();
     if (!pendingFine) throw new Error('Expected replacement pending fine');

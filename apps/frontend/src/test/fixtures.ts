@@ -54,6 +54,7 @@ export function makeCycle(
   return {
     closedAt: null,
     cycleNumber: 1,
+    fineRuleVersion: "V2",
     id: "cycle-001",
     openedAt: "2026-07-01T03:00:00.000Z",
     paidAmountBaht: 0,

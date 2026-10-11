@@ -9,6 +9,7 @@ import { parsePastDateTime } from '../common/date-time';
 import { DomainError } from '../common/domain-error';
 import { runSerializable } from '../common/serializable-transaction';
 import { findOpenCycleViolation } from '../parking/find-open-cycle-violation';
+import { CURRENT_FINE_RULE_VERSION } from '../parking/parking-rules';
 import { PrismaService } from '../database/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
 import { mapViolation, summarizeCycle } from '../houses/houses.types';
@@ -59,7 +60,7 @@ export class ViolationsService {
         },
       });
 
-      await resequenceCycle(tx, cycle.id, actor);
+      await resequenceCycle(tx, cycle, actor);
       await writeAudit(
         tx,
         'ParkingViolation',
@@ -143,7 +144,7 @@ export class ViolationsService {
         );
       }
 
-      await resequenceCycle(tx, violation.cycleId, actor);
+      await resequenceCycle(tx, violation.cycle, actor);
       await writeAudit(
         tx,
         'ParkingViolation',
@@ -207,7 +208,7 @@ export class ViolationsService {
         },
       });
 
-      await resequenceCycle(tx, violation.cycleId, actor);
+      await resequenceCycle(tx, violation.cycle, actor);
       await writeAudit(
         tx,
         'ParkingViolation',
@@ -270,6 +271,7 @@ export class ViolationsService {
         houseId,
         cycleNumber: (latestCycle?.cycleNumber ?? 0) + 1,
         status: 'OPEN',
+        fineRuleVersion: CURRENT_FINE_RULE_VERSION,
         openedAt: occurredAt,
       },
     });

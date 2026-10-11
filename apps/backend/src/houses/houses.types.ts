@@ -5,6 +5,7 @@ import type {
   HouseDetail,
   HouseSummary,
   ViolationResponse,
+  FineRuleVersion,
 } from '@spk-r5-parking-log/shared-types';
 
 interface FineRecord {
@@ -29,6 +30,7 @@ interface ViolationRecord {
 interface CycleRecord {
   id: string;
   cycleNumber: number;
+  fineRuleVersion: FineRuleVersion;
   status: 'OPEN' | 'CLOSED';
   openedAt: Date;
   closedAt: Date | null;
@@ -79,6 +81,7 @@ export function summarizeCycle(cycle: CycleRecord): CycleSummary {
   return {
     id: cycle.id,
     cycleNumber: cycle.cycleNumber,
+    fineRuleVersion: cycle.fineRuleVersion,
     violationCount: activeViolations.length,
     pendingFineCount: pendingFines.length,
     pendingAmountBaht: pendingFines.reduce(

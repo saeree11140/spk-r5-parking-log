@@ -111,6 +111,7 @@ describe('ViolationsService.create', () => {
     const createCycle = jest.fn().mockResolvedValue({
       id: 'cycle-2',
       cycleNumber: 2,
+      fineRuleVersion: 'V2',
       status: 'OPEN',
     });
     const tx = {
@@ -125,6 +126,7 @@ describe('ViolationsService.create', () => {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'cycle-2',
           cycleNumber: 2,
+          fineRuleVersion: 'V2',
           status: 'OPEN',
           violations: [violation],
         }),
@@ -158,6 +160,7 @@ describe('ViolationsService.create', () => {
         houseId: 'house-1',
         cycleNumber: 2,
         status: 'OPEN',
+        fineRuleVersion: 'V2',
         openedAt: new Date('2026-07-26T01:50:04Z'),
       },
     });
@@ -235,10 +238,12 @@ describe('ViolationsService.create', () => {
         create: jest.fn().mockResolvedValue({
           id: 'cycle-1',
           cycleNumber: 1,
+          fineRuleVersion: 'V2',
           status: 'OPEN',
         }),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'cycle-1',
+          fineRuleVersion: 'V2',
           cycleNumber: 1,
           status: 'OPEN',
           violations: [violation],
@@ -409,6 +414,7 @@ describe('ViolationsService.cancel', () => {
       violationCycle: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'cycle-1',
+          fineRuleVersion: 'V2',
           cycleNumber: 1,
           violations: [cancelled],
         }),
@@ -467,6 +473,7 @@ describe('ViolationsService.update', () => {
         id: 'cycle-1',
         cycleNumber: 1,
         status: 'OPEN',
+        fineRuleVersion: 'V2',
         openedAt: new Date('2026-07-01T00:00:00Z'),
         closedAt: null,
       },

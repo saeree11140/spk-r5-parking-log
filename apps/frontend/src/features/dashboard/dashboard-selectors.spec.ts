@@ -10,6 +10,7 @@ const houses = [
     code: "R5-002",
     currentCycle: {
       cycleNumber: 1,
+      fineRuleVersion: "V2",
       id: "cycle-002",
       pendingAmountBaht: 1_000,
       pendingFineCount: 1,
@@ -30,6 +31,7 @@ const houses = [
     code: "R5-003",
     currentCycle: {
       cycleNumber: 1,
+      fineRuleVersion: "V2",
       id: "cycle-003",
       pendingAmountBaht: 500,
       pendingFineCount: 1,

@@ -34,7 +34,11 @@ describe('resequenceCycle', () => {
       auditLog: { create: auditCreate },
     } as unknown as Prisma.TransactionClient;
 
-    const result = await resequenceCycle(tx, 'cycle-1', SYSTEM_ACTOR);
+    const result = await resequenceCycle(
+      tx,
+      { id: 'cycle-1', fineRuleVersion: 'V1' },
+      SYSTEM_ACTOR,
+    );
 
     expect(result.map(({ fineAmountBaht }) => fineAmountBaht)).toEqual([
       0, 0, 1000, 500, 500,
@@ -91,7 +95,11 @@ describe('resequenceCycle', () => {
       auditLog: { create: jest.fn() },
     } as unknown as Prisma.TransactionClient;
 
-    await resequenceCycle(tx, 'cycle-1', SYSTEM_ACTOR);
+    await resequenceCycle(
+      tx,
+      { id: 'cycle-1', fineRuleVersion: 'V1' },
+      SYSTEM_ACTOR,
+    );
 
     expect(upsert).not.toHaveBeenCalled();
     expect(update).toHaveBeenCalledWith({
@@ -138,7 +146,11 @@ describe('resequenceCycle', () => {
       auditLog: { create: auditCreate },
     } as unknown as Prisma.TransactionClient;
 
-    await resequenceCycle(tx, 'cycle-1', SYSTEM_ACTOR);
+    await resequenceCycle(
+      tx,
+      { id: 'cycle-1', fineRuleVersion: 'V1' },
+      SYSTEM_ACTOR,
+    );
 
     expect(fineUpdate).toHaveBeenCalledWith({
       where: { id: fineBefore.id },
@@ -198,7 +210,11 @@ describe('resequenceCycle', () => {
       auditLog: { create: auditCreate },
     } as unknown as Prisma.TransactionClient;
 
-    await resequenceCycle(tx, 'cycle-1', SYSTEM_ACTOR);
+    await resequenceCycle(
+      tx,
+      { id: 'cycle-1', fineRuleVersion: 'V1' },
+      SYSTEM_ACTOR,
+    );
 
     expect(fineUpdate).not.toHaveBeenCalled();
     expect(fineUpdateMany).not.toHaveBeenCalled();

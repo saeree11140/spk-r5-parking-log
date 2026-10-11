@@ -15,6 +15,13 @@ enum CycleStatus {
   @@map("cycle_status")
 }
 
+enum FineRuleVersion {
+  V1
+  V2
+
+  @@map("fine_rule_version")
+}
+
 enum ViolationStatus {
   WARNING
   PENDING_FINE
@@ -79,16 +86,17 @@ model House {
 }
 
 model ViolationCycle {
-  id          String             @id @default(uuid()) @db.Uuid
-  houseId     String             @map("house_id") @db.Uuid
-  cycleNumber Int                @map("cycle_number")
-  status      CycleStatus        @default(OPEN)
-  openedAt    DateTime           @default(now()) @map("opened_at") @db.Timestamptz(3)
-  closedAt    DateTime?          @map("closed_at") @db.Timestamptz(3)
-  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
-  house       House              @relation(fields: [houseId], references: [id], onDelete: Restrict)
-  violations  ParkingViolation[]
+  id              String             @id @default(uuid()) @db.Uuid
+  houseId         String             @map("house_id") @db.Uuid
+  cycleNumber     Int                @map("cycle_number")
+  status          CycleStatus        @default(OPEN)
+  fineRuleVersion FineRuleVersion    @default(V2) @map("fine_rule_version")
+  openedAt        DateTime           @default(now()) @map("opened_at") @db.Timestamptz(3)
+  closedAt        DateTime?          @map("closed_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  house           House              @relation(fields: [houseId], references: [id], onDelete: Restrict)
+  violations      ParkingViolation[]
 
   @@unique([houseId, cycleNumber])
   @@index([houseId])

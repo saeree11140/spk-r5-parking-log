@@ -22,6 +22,11 @@ const violationLabels: Record<ViolationResponse["status"], string> = {
   WARNING: "แจ้งเตือน",
 };
 
+const fineRuleLabels: Record<CycleResponse["fineRuleVersion"], string> = {
+  V1: "กติกาเดิม: แจ้งเตือน 2 ครั้ง",
+  V2: "กติกาใหม่: แจ้งเตือน 1 ครั้ง",
+};
+
 const violationTones: Record<ViolationResponse["status"], StatusTone> = {
   CANCELLED: "neutral",
   PAID: "success",
@@ -76,6 +81,7 @@ export function CycleHistory({
                     ? ` · ปิด ${formatThaiDateTime(cycle.closedAt)}`
                     : ""}
                 </p>
+                <p>{fineRuleLabels[cycle.fineRuleVersion]}</p>
               </div>
               <StatusBadge tone={cycle.status === "OPEN" ? "info" : "success"}>
                 {cycle.status === "OPEN" ? "กำลังใช้งาน" : "ปิดแล้ว"}
