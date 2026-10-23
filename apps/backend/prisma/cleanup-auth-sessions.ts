@@ -21,6 +21,12 @@ async function main(): Promise<void> {
         ],
       },
     });
+    await prisma.loginFailure.deleteMany({
+      where: {
+        updatedAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+        OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
+      },
+    });
   } finally {
     await prisma.$disconnect();
   }

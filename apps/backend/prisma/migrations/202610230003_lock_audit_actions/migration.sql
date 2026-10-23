@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "audit_action" ADD VALUE IF NOT EXISTS 'LOCK';
+ALTER TYPE "audit_action" ADD VALUE IF NOT EXISTS 'UNLOCK';

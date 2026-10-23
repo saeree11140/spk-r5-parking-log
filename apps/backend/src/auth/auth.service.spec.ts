@@ -42,6 +42,12 @@ interface AuditCreateArgs {
   data: Record<string, unknown>;
 }
 
+interface UpsertArgs {
+  where: unknown;
+  create: Record<string, unknown>;
+  update: Record<string, unknown>;
+}
+
 type PrismaMock = {
   user: {
     findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
@@ -51,10 +57,16 @@ type PrismaMock = {
   authSession: {
     findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
     create: jest.Mock<(args: unknown) => Promise<unknown>>;
+    update: jest.Mock<(args: unknown) => Promise<unknown>>;
     updateMany: jest.Mock<(args: MutationArgs) => Promise<{ count: number }>>;
   };
   auditLog: {
     create: jest.Mock<(args: AuditCreateArgs) => Promise<unknown>>;
+  };
+  loginFailure: {
+    findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
+    upsert: jest.Mock<(args: UpsertArgs) => Promise<unknown>>;
+    deleteMany: jest.Mock<(args: unknown) => Promise<{ count: number }>>;
   };
   $transaction: jest.Mock<
     (
@@ -88,6 +100,7 @@ describe('AuthService', () => {
       userUpdates: [] as MutationArgs[],
       sessionUpdates: [] as MutationArgs[],
       audits: [] as AuditCreateArgs[],
+      failureUpserts: [] as UpsertArgs[],
     };
     const transaction =
       mockFunction<
@@ -111,6 +124,9 @@ describe('AuthService', () => {
       authSession: {
         findUnique: mockFunction<(args: unknown) => Promise<unknown>>(),
         create: mockFunction<(args: unknown) => Promise<unknown>>(),
+        update: mockFunction<
+          (args: unknown) => Promise<unknown>
+        >().mockResolvedValue({ failedPasswordChecks: 1 }),
         updateMany: mockFunction<
           (args: MutationArgs) => Promise<{ count: number }>
         >().mockImplementation((args) => {
@@ -125,6 +141,21 @@ describe('AuthService', () => {
           calls.audits.push(args);
           return Promise.resolve({});
         }),
+      },
+      loginFailure: {
+        findUnique:
+          mockFunction<(args: unknown) => Promise<unknown>>().mockResolvedValue(
+            null,
+          ),
+        upsert: mockFunction<
+          (args: UpsertArgs) => Promise<unknown>
+        >().mockImplementation((args) => {
+          calls.failureUpserts.push(args);
+          return Promise.resolve({});
+        }),
+        deleteMany: mockFunction<
+          (args: unknown) => Promise<{ count: number }>
+        >().mockResolvedValue({ count: 0 }),
       },
       $transaction: transaction,
     };
@@ -161,9 +192,13 @@ describe('AuthService', () => {
     return { service, prisma, passwordService, tokenService, calls };
   }
 
-  it('returns generic credentials error and locks on fifth failure', async () => {
+  it('returns generic credentials error and locks the IP on fifth failure', async () => {
     const { service, prisma, passwordService, calls } = setup();
     prisma.user.findUnique.mockResolvedValue(userRecord);
+    prisma.loginFailure.findUnique.mockResolvedValue({
+      failedCount: 4,
+      lockedUntil: null,
+    });
     passwordService.verify.mockResolvedValue(false);
 
     await expect(
@@ -175,10 +210,12 @@ describe('AuthService', () => {
       statusCode: 401,
       code: 'AUTH_INVALID_CREDENTIALS',
     });
-    const update = calls.userUpdates.at(-1);
-    expect(update?.where).toEqual({ id: userRecord.id });
-    expect(update?.data.failedLoginAttempts).toBe(5);
-    expect(update?.data.lockedUntil).toBeInstanceOf(Date);
+    const upsert = calls.failureUpserts.at(-1);
+    expect(upsert?.where).toEqual({
+      userId_ipAddress: { userId: userRecord.id, ipAddress: '127.0.0.1' },
+    });
+    expect(upsert?.update.failedCount).toBe(5);
+    expect(upsert?.update.lockedUntil).toBeInstanceOf(Date);
   });
 
   it('rejects login when credentials changed before session creation', async () => {
@@ -265,10 +302,10 @@ describe('AuthService', () => {
   });
 
   it('resets an expired lock before counting the next failure', async () => {
-    const { service, prisma, passwordService } = setup();
-    prisma.user.findUnique.mockResolvedValue({
-      ...userRecord,
-      failedLoginAttempts: 5,
+    const { service, prisma, passwordService, calls } = setup();
+    prisma.user.findUnique.mockResolvedValue(userRecord);
+    prisma.loginFailure.findUnique.mockResolvedValue({
+      failedCount: 5,
       lockedUntil: new Date(Date.now() - 1_000),
     });
     passwordService.verify.mockResolvedValue(false);
@@ -276,13 +313,44 @@ describe('AuthService', () => {
     await expect(
       service.login({ username: 'admin', password: 'WrongPassword123' }, {}),
     ).rejects.toMatchObject({ code: 'AUTH_INVALID_CREDENTIALS' });
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: userRecord.id },
-      data: {
-        failedLoginAttempts: 1,
-        lockedUntil: null,
-      },
+    expect(calls.failureUpserts.at(-1)?.update).toEqual({
+      failedCount: 1,
+      lockedUntil: null,
     });
+  });
+
+  it('locks the account on the twentieth failure within the hour', async () => {
+    const { service, prisma, passwordService, calls } = setup();
+    prisma.user.findUnique.mockResolvedValue({
+      ...userRecord,
+      failedLoginAttempts: 19,
+      failedWindowStartedAt: new Date(Date.now() - 30 * 60 * 1000),
+    });
+    passwordService.verify.mockResolvedValue(false);
+
+    await expect(
+      service.login({ username: 'admin', password: 'WrongPassword123' }, {}),
+    ).rejects.toMatchObject({ code: 'AUTH_INVALID_CREDENTIALS' });
+    const update = calls.userUpdates.at(-1);
+    expect(update?.data.failedLoginAttempts).toBe(20);
+    expect(update?.data.lockedUntil).toBeInstanceOf(Date);
+  });
+
+  it('starts a new account-wide window after an hour', async () => {
+    const { service, prisma, passwordService, calls } = setup();
+    prisma.user.findUnique.mockResolvedValue({
+      ...userRecord,
+      failedLoginAttempts: 19,
+      failedWindowStartedAt: new Date(Date.now() - 61 * 60 * 1000),
+    });
+    passwordService.verify.mockResolvedValue(false);
+
+    await expect(
+      service.login({ username: 'admin', password: 'WrongPassword123' }, {}),
+    ).rejects.toMatchObject({ code: 'AUTH_INVALID_CREDENTIALS' });
+    const update = calls.userUpdates.at(-1);
+    expect(update?.data.failedLoginAttempts).toBe(1);
+    expect(update?.data.lockedUntil).toBeNull();
   });
 
   it('revokes an expired refresh session', async () => {

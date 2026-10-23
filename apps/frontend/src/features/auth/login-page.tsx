@@ -102,9 +102,12 @@ export function LoginPage() {
                 {mutation.error instanceof ApiError &&
                 mutation.error.code === "AUTH_INVALID_CREDENTIALS"
                   ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
-                  : mutation.error instanceof Error
-                    ? mutation.error.message
-                    : "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}
+                  : mutation.error instanceof ApiError &&
+                      mutation.error.code === "AUTH_ACCOUNT_LOCKED"
+                    ? "บัญชีถูกล็อกชั่วคราว กรุณาลองใหม่ภายหลังหรือติดต่อผู้ดูแลระบบ"
+                    : mutation.error instanceof Error
+                      ? mutation.error.message
+                      : "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}
               </p>
             ) : null}
             <Button

@@ -4,6 +4,7 @@ import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 
 import { DomainError } from '../common/domain-error';
+import type { Prisma } from '../generated/prisma/client';
 import { runSerializable } from '../common/serializable-transaction';
 import { PrismaService } from '../database/prisma.service';
 import type { ChangePasswordDto } from './dto/change-password.dto';
@@ -19,6 +20,9 @@ import { TokenService } from './token.service';
 const SESSION_LIFETIME_MS = 8 * 60 * 60 * 1000;
 const LOCK_LIFETIME_MS = 15 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 5;
+const MAX_ACCOUNT_LOGIN_ATTEMPTS = 20;
+const MAX_PASSWORD_CHECKS_PER_SESSION = 5;
+const ACCOUNT_FAILURE_WINDOW_MS = 60 * 60 * 1000;
 const DUMMY_PASSWORD_HASH =
   '$argon2id$v=19$m=65536,p=4,t=3$OYYBMfn1aP+rktDHCPGRhg$eq+JyJwAUepnc4xmUiLXhF60WQqajDvjQRFqBSL6k/Y';
 
@@ -47,11 +51,22 @@ export class AuthService {
       input.password,
     );
     const now = new Date();
-    const isLocked = Boolean(user?.lockedUntil && user.lockedUntil > now);
+    const ipAddress = this.clientIpAddress(metadata);
+    const isLocked = user?.isActive
+      ? await this.isLoginLocked(user, ipAddress, now)
+      : false;
 
     if (!user || !passwordMatches || !user.isActive || isLocked) {
       if (user?.isActive && !isLocked && !passwordMatches) {
-        await this.registerFailedLogin(user.id, now);
+        await this.registerFailedLogin(user.id, ipAddress, now);
+      }
+      // Reveal the lock only to someone who already knows the password.
+      if (user?.isActive && isLocked && passwordMatches) {
+        throw new DomainError(
+          423,
+          'AUTH_ACCOUNT_LOCKED',
+          'Account is temporarily locked',
+        );
       }
       throw this.invalidCredentials();
     }
@@ -70,14 +85,15 @@ export class AuthService {
           isActive: true,
           OR: [{ lockedUntil: null }, { lockedUntil: { lte: now } }],
         },
-        data: {
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-        },
+        // The account-wide failure count is left to expire with its window.
+        data: { lockedUntil: null },
       });
       if (credentialSnapshot.count !== 1) {
         throw this.invalidCredentials();
       }
+      await tx.loginFailure.deleteMany({
+        where: { userId: user.id, ipAddress },
+      });
       await tx.authSession.create({
         data: {
           id: sessionId,
@@ -231,6 +247,9 @@ export class AuthService {
         input.currentPassword,
       ));
     if (!currentUser?.isActive || !currentPasswordMatches) {
+      if (currentUser?.isActive) {
+        await this.registerFailedPasswordCheck(user);
+      }
       throw new DomainError(
         401,
         'AUTH_CURRENT_PASSWORD_INVALID',
@@ -311,35 +330,145 @@ export class AuthService {
     );
   }
 
-  private async registerFailedLogin(userId: string, now: Date): Promise<void> {
+  private async isLoginLocked(
+    user: { id: string; lockedUntil: Date | null },
+    ipAddress: string,
+    now: Date,
+  ): Promise<boolean> {
+    if (user.lockedUntil && user.lockedUntil > now) return true;
+
+    const failure = await this.prisma.loginFailure.findUnique({
+      where: { userId_ipAddress: { userId: user.id, ipAddress } },
+      select: { lockedUntil: true },
+    });
+    return Boolean(failure?.lockedUntil && failure.lockedUntil > now);
+  }
+
+  private async registerFailedLogin(
+    userId: string,
+    ipAddress: string,
+    now: Date,
+  ): Promise<void> {
     await runSerializable(this.prisma, async (tx) => {
-      const current = await tx.user.findUnique({
+      const key = { userId_ipAddress: { userId, ipAddress } };
+      const current = await tx.loginFailure.findUnique({
+        where: key,
+        select: { failedCount: true, lockedUntil: true },
+      });
+
+      const lockExpired = Boolean(
+        current?.lockedUntil && current.lockedUntil <= now,
+      );
+      const failedCount = !current || lockExpired ? 1 : current.failedCount + 1;
+      const lockedUntil =
+        failedCount >= MAX_LOGIN_ATTEMPTS
+          ? new Date(now.getTime() + LOCK_LIFETIME_MS)
+          : null;
+
+      await tx.loginFailure.upsert({
+        where: key,
+        create: { userId, ipAddress, failedCount, lockedUntil },
+        update: { failedCount, lockedUntil },
+      });
+      if (lockedUntil) {
+        await this.writeLockAudit(tx, userId, {
+          scope: 'IP',
+          ipAddress,
+          lockedUntil: lockedUntil.toISOString(),
+        });
+      }
+
+      const account = await tx.user.findUnique({
         where: { id: userId },
         select: {
           failedLoginAttempts: true,
+          failedWindowStartedAt: true,
           lockedUntil: true,
         },
       });
-      if (!current) return;
+      if (!account) return;
 
-      const lockExpired = Boolean(
-        current.lockedUntil && current.lockedUntil <= now,
+      const windowOpen = Boolean(
+        account.failedWindowStartedAt &&
+        now.getTime() - account.failedWindowStartedAt.getTime() <
+          ACCOUNT_FAILURE_WINDOW_MS &&
+        !(account.lockedUntil && account.lockedUntil <= now),
       );
-      const failedLoginAttempts = lockExpired
-        ? 1
-        : current.failedLoginAttempts + 1;
+      const failedLoginAttempts = windowOpen
+        ? account.failedLoginAttempts + 1
+        : 1;
+      const accountLockedUntil =
+        failedLoginAttempts >= MAX_ACCOUNT_LOGIN_ATTEMPTS
+          ? new Date(now.getTime() + LOCK_LIFETIME_MS)
+          : null;
 
       await tx.user.update({
         where: { id: userId },
         data: {
           failedLoginAttempts,
-          lockedUntil:
-            failedLoginAttempts >= MAX_LOGIN_ATTEMPTS
-              ? new Date(now.getTime() + LOCK_LIFETIME_MS)
-              : null,
+          failedWindowStartedAt: windowOpen
+            ? account.failedWindowStartedAt
+            : now,
+          lockedUntil: accountLockedUntil,
         },
       });
+      if (accountLockedUntil) {
+        await this.writeLockAudit(tx, userId, {
+          scope: 'ACCOUNT',
+          ipAddress,
+          lockedUntil: accountLockedUntil.toISOString(),
+        });
+      }
     });
+  }
+
+  private async writeLockAudit(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    after: Prisma.InputJsonObject,
+  ): Promise<void> {
+    await tx.auditLog.create({
+      data: {
+        entityType: 'User',
+        entityId: userId,
+        action: 'LOCK',
+        after,
+        actorType: 'SYSTEM',
+      },
+    });
+  }
+
+  // A session that keeps guessing its own password is treated as stolen.
+  private async registerFailedPasswordCheck(
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const revoked = await runSerializable(this.prisma, async (tx) => {
+      const session = await tx.authSession.update({
+        where: { id: user.sessionId },
+        data: { failedPasswordChecks: { increment: 1 } },
+        select: { failedPasswordChecks: true },
+      });
+      if (session.failedPasswordChecks < MAX_PASSWORD_CHECKS_PER_SESSION) {
+        return false;
+      }
+
+      await tx.authSession.updateMany({
+        where: { id: user.sessionId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.writeLockAudit(tx, user.id, {
+        scope: 'SESSION',
+        sessionId: user.sessionId,
+      });
+      return true;
+    });
+    if (revoked) {
+      throw new DomainError(401, 'AUTH_REQUIRED', 'Authentication required');
+    }
+  }
+
+  private clientIpAddress(metadata: RequestMetadata): string {
+    return (metadata.ipAddress ?? 'unknown').slice(0, 64);
   }
 
   private async buildTokens(

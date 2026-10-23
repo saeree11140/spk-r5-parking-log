@@ -37,4 +37,24 @@ describe("LoginPage", () => {
       "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
     );
   });
+
+  it("tells a user with the right password that the account is locked", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authApi.login).mockRejectedValue(
+      new ApiError(
+        "Account is temporarily locked",
+        "AUTH_ACCOUNT_LOCKED",
+        423,
+      ),
+    );
+
+    renderWithQueryClient(<LoginPage />);
+    await user.type(screen.getByLabelText("ชื่อผู้ใช้"), "admin");
+    await user.type(screen.getByLabelText("รหัสผ่าน"), "StrongPassword123");
+    await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "บัญชีถูกล็อกชั่วคราว กรุณาลองใหม่ภายหลังหรือติดต่อผู้ดูแลระบบ",
+    );
+  });
 });

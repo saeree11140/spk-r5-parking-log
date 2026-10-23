@@ -99,11 +99,22 @@ pnpm db:status
 
 Seed รันซ้ำได้ ไม่เขียนทับบ้านหรือ ADMIN เดิม Login ครั้งแรกบังคับเปลี่ยนรหัสผ่าน
 
-ลบ Auth Session ที่หมดอายุ:
+ลบ Auth Session ที่หมดอายุ และ login failure เก่าที่ไม่ได้ล็อกอยู่:
 
 ```bash
 pnpm --filter backend auth:sessions:cleanup
 ```
+
+Login ผิด 5 ครั้งจาก IP เดียวล็อก user นั้นที่ IP นั้น 15 นาที และผิดรวม 20 ครั้ง
+จากทุก IP ภายใน 1 ชั่วโมงล็อกทั้งบัญชี 15 นาที ADMIN ปลดล็อกคนอื่นได้ด้วยการ
+reset password ถ้า ADMIN คนเดียวถูกล็อก ให้ผู้ที่เข้าถึง Database ได้รัน:
+
+```bash
+pnpm --filter backend auth:unlock <username>
+```
+
+คำสั่งนี้ล้าง lock ทุกแบบของ user นั้นและบันทึก audit `UNLOCK` ดูเหตุผลของการออกแบบใน
+`docs/adr/0001-login-lockout.md`
 
 หยุด PostgreSQL โดยเก็บข้อมูลใน Named Volume:
 

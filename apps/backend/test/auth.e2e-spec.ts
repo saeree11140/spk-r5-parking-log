@@ -1,5 +1,6 @@
 import request, { type Response } from 'supertest';
 
+import { unlockUser } from '../src/auth/unlock-user';
 import { createAuthTestHarness } from './auth-test-helpers';
 
 function bodyAs<T>(response: Response): T {
@@ -175,32 +176,202 @@ describe('Authentication and authorization (e2e)', () => {
     await auth.agent.get('/api/houses').expect(403);
   });
 
-  it('locks an account for 15 minutes on the fifth failed login', async () => {
-    const staff = await harness.createUser('STAFF');
-
-    for (let attempt = 1; attempt <= 5; attempt += 1) {
-      await request(harness.app.getHttpServer())
-        .post('/api/auth/login')
-        .set('Origin', harness.frontendUrl)
-        .set('X-Forwarded-For', staff.ipAddress)
-        .send({
-          username: staff.username,
-          password: 'WrongPassword123',
-        })
-        .expect(401);
-    }
-    await request(harness.app.getHttpServer())
+  function attemptLogin(username: string, password: string, ipAddress: string) {
+    return request(harness.app.getHttpServer())
       .post('/api/auth/login')
       .set('Origin', harness.frontendUrl)
-      .set('X-Forwarded-For', staff.ipAddress)
-      .send({ username: staff.username, password: staff.password })
-      .expect(401);
+      .set('X-Forwarded-For', ipAddress)
+      .send({ username, password });
+  }
 
-    const locked = await harness.prisma.user.findUniqueOrThrow({
-      where: { id: staff.id },
+  async function failLogins(
+    username: string,
+    ipAddress: string,
+    count: number,
+  ): Promise<void> {
+    for (let attempt = 1; attempt <= count; attempt += 1) {
+      await attemptLogin(username, 'WrongPassword123', ipAddress).expect(401);
+    }
+  }
+
+  it('locks only the failing IP for a user after five failed logins', async () => {
+    const staff = await harness.createUser('STAFF');
+    const otherIpAddress = '203.0.113.10';
+
+    await failLogins(staff.username, staff.ipAddress, 5);
+
+    const locked = await attemptLogin(
+      staff.username,
+      staff.password,
+      staff.ipAddress,
+    ).expect(423);
+    expect(bodyAs<{ code: string }>(locked).code).toBe('AUTH_ACCOUNT_LOCKED');
+    const wrongPassword = await attemptLogin(
+      staff.username,
+      'WrongPassword123',
+      staff.ipAddress,
+    ).expect(401);
+    expect(bodyAs<{ code: string }>(wrongPassword).code).toBe(
+      'AUTH_INVALID_CREDENTIALS',
+    );
+    await attemptLogin(staff.username, staff.password, otherIpAddress).expect(
+      201,
+    );
+  });
+
+  function lockAudits(userId: string) {
+    return harness.prisma.auditLog.findMany({
+      where: { entityType: 'User', entityId: userId, action: 'LOCK' },
     });
-    expect(locked.failedLoginAttempts).toBe(5);
-    expect(locked.lockedUntil?.getTime()).toBeGreaterThan(Date.now());
+  }
+
+  it('audits an IP lock once, on the failure that locks it', async () => {
+    const staff = await harness.createUser('STAFF');
+
+    await failLogins(staff.username, staff.ipAddress, 4);
+    await expect(lockAudits(staff.id)).resolves.toHaveLength(0);
+    await failLogins(staff.username, staff.ipAddress, 1);
+
+    const audits = await lockAudits(staff.id);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      actorType: 'SYSTEM',
+      after: { scope: 'IP', ipAddress: staff.ipAddress },
+    });
+  });
+
+  it('audits an account-wide lock', async () => {
+    const staff = await harness.createUser('STAFF');
+
+    await failLoginsAcrossIps(staff.username, '192.0.5', 4);
+
+    const accountLocks = (await lockAudits(staff.id)).filter(
+      (audit) =>
+        (audit.after as { scope?: string } | null)?.scope === 'ACCOUNT',
+    );
+    expect(accountLocks).toHaveLength(1);
+  });
+
+  it('clears the IP failure count after a successful login', async () => {
+    const staff = await harness.createUser('STAFF');
+
+    await failLogins(staff.username, staff.ipAddress, 4);
+    await attemptLogin(staff.username, staff.password, staff.ipAddress).expect(
+      201,
+    );
+    await failLogins(staff.username, staff.ipAddress, 4);
+    await attemptLogin(staff.username, staff.password, staff.ipAddress).expect(
+      201,
+    );
+  });
+
+  it('does not track failures for unknown usernames', async () => {
+    const ipAddress = '203.0.113.11';
+
+    await failLogins('e2e_unknown_user', ipAddress, 3);
+
+    await expect(
+      harness.prisma.loginFailure.count({ where: { ipAddress } }),
+    ).resolves.toBe(0);
+  });
+
+  async function failLoginsAcrossIps(
+    username: string,
+    ipPrefix: string,
+    ipCount: number,
+  ): Promise<void> {
+    for (let index = 1; index <= ipCount; index += 1) {
+      await failLogins(username, `${ipPrefix}.${index}`, 5);
+    }
+  }
+
+  it('locks the whole account after twenty failures across IPs in an hour', async () => {
+    const staff = await harness.createUser('STAFF');
+
+    await failLoginsAcrossIps(staff.username, '192.0.2', 4);
+
+    const locked = await attemptLogin(
+      staff.username,
+      staff.password,
+      '192.0.2.99',
+    ).expect(423);
+    expect(bodyAs<{ code: string }>(locked).code).toBe('AUTH_ACCOUNT_LOCKED');
+  });
+
+  it('keeps the account-wide count after a successful login', async () => {
+    const staff = await harness.createUser('STAFF');
+
+    await failLoginsAcrossIps(staff.username, '192.0.3', 3);
+    await attemptLogin(staff.username, staff.password, '192.0.3.50').expect(
+      201,
+    );
+    await failLogins(staff.username, '192.0.3.51', 5);
+
+    await attemptLogin(staff.username, staff.password, '192.0.3.99').expect(
+      423,
+    );
+  });
+
+  it('clears the account-wide lock when an admin resets the password', async () => {
+    const admin = await harness.createUser('ADMIN');
+    const staff = await harness.createUser('STAFF');
+    const adminAuth = await harness.login(admin);
+    await failLoginsAcrossIps(staff.username, '192.0.4', 4);
+
+    await adminAuth.agent
+      .post(`/api/users/${staff.id}/reset-password`)
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', adminAuth.csrf)
+      .send({ temporaryPassword: 'TemporaryPassword123' })
+      .expect(201);
+
+    await attemptLogin(
+      staff.username,
+      'TemporaryPassword123',
+      '192.0.4.99',
+    ).expect(201);
+  });
+
+  it('unlocks every lock of a user from the emergency CLI', async () => {
+    const staff = await harness.createUser('STAFF');
+    await failLoginsAcrossIps(staff.username, '192.0.6', 4);
+
+    await expect(unlockUser(harness.prisma, staff.username)).resolves.toBe(
+      true,
+    );
+
+    await attemptLogin(staff.username, staff.password, '192.0.6.1').expect(201);
+    const unlocks = await harness.prisma.auditLog.findMany({
+      where: { entityType: 'User', entityId: staff.id, action: 'UNLOCK' },
+    });
+    expect(unlocks).toHaveLength(1);
+    expect(unlocks[0]?.actorType).toBe('SYSTEM');
+  });
+
+  it('reports an unknown username to the emergency CLI', async () => {
+    await expect(unlockUser(harness.prisma, 'e2e_missing_user')).resolves.toBe(
+      false,
+    );
+  });
+
+  it('clears IP locks when an admin resets the password', async () => {
+    const admin = await harness.createUser('ADMIN');
+    const staff = await harness.createUser('STAFF');
+    const adminAuth = await harness.login(admin);
+    await failLogins(staff.username, staff.ipAddress, 5);
+
+    await adminAuth.agent
+      .post(`/api/users/${staff.id}/reset-password`)
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', adminAuth.csrf)
+      .send({ temporaryPassword: 'TemporaryPassword123' })
+      .expect(201);
+
+    await attemptLogin(
+      staff.username,
+      'TemporaryPassword123',
+      staff.ipAddress,
+    ).expect(201);
   });
 
   it('rejects state changes without matching CSRF tokens', async () => {
@@ -295,6 +466,39 @@ describe('Authentication and authorization (e2e)', () => {
       await guess().expect(401);
     }
     await guess().expect(429);
+  });
+
+  it('revokes a session after five wrong current passwords without locking the owner', async () => {
+    const staff = await harness.createUser('STAFF');
+    const auth = await harness.login(staff);
+    const guess = () =>
+      auth.agent
+        .post('/api/auth/change-password')
+        .set('Origin', harness.frontendUrl)
+        .set('X-Forwarded-For', staff.ipAddress)
+        .set('X-CSRF-Token', auth.csrf)
+        .send({
+          currentPassword: 'WrongPassword123',
+          newPassword: 'NewStrongPassword123',
+          confirmPassword: 'NewStrongPassword123',
+        });
+
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      const response = await guess().expect(401);
+      expect(bodyAs<{ code: string }>(response).code).toBe(
+        'AUTH_CURRENT_PASSWORD_INVALID',
+      );
+    }
+    const revoked = await guess().expect(401);
+    expect(bodyAs<{ code: string }>(revoked).code).toBe('AUTH_REQUIRED');
+
+    await auth.agent.get('/api/auth/me').expect(401);
+    await harness.login(staff);
+    const audits = await harness.prisma.auditLog.findMany({
+      where: { entityType: 'User', entityId: staff.id, action: 'LOCK' },
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.after).toMatchObject({ scope: 'SESSION' });
   });
 
   it('returns the generic credentials error for inactive users', async () => {

@@ -184,6 +184,7 @@ export class UsersService {
           mustChangePassword: true,
           passwordChangedAt: now,
           failedLoginAttempts: 0,
+          failedWindowStartedAt: null,
           lockedUntil: null,
         },
       });
@@ -191,6 +192,7 @@ export class UsersService {
         where: { userId, revokedAt: null },
         data: { revokedAt: now },
       });
+      await tx.loginFailure.deleteMany({ where: { userId } });
       await tx.auditLog.create({
         data: {
           entityType: 'User',

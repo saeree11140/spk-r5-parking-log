@@ -49,6 +49,9 @@ describe('UsersService', () => {
       authSession: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      loginFailure: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       auditLog: {
         create: jest.fn().mockResolvedValue({}),
       },

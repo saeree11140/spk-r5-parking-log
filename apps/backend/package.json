@@ -19,6 +19,7 @@
     "prisma:seed": "prisma db seed",
     "prisma:status": "prisma migrate status",
     "auth:sessions:cleanup": "tsx prisma/cleanup-auth-sessions.ts",
+    "auth:unlock": "tsx prisma/unlock-user.ts",
     "prebuild": "prisma generate",
     "pretest": "prisma generate",
     "pretest:e2e": "prisma generate",
