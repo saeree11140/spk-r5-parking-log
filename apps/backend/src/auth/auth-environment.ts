@@ -34,6 +34,12 @@ export function requireAuthEnvironment(
     throw new Error('COOKIE_SECURE must be true in production');
   }
   if (
+    environment.NODE_ENV === 'production' &&
+    !environment.TRUST_PROXY_HOPS?.trim()
+  ) {
+    throw new Error('TRUST_PROXY_HOPS must be set in production');
+  }
+  if (
     !/^\d+$/.test(trustProxyValue) ||
     !Number.isInteger(trustProxyHops) ||
     trustProxyHops < 0 ||

@@ -79,6 +79,10 @@ Password ต้องยาว 12–128 ตัวอักษร มีตัว
 `TRUST_PROXY_HOPS` ต้องเป็นจำนวน reverse proxy ที่รู้แน่นอนระหว่าง `0–3`
 เท่านั้น ใช้ `0` เมื่อ Backend รับ request โดยตรง และ `1` เมื่ออยู่หลัง proxy
 หนึ่งชั้น ห้ามเชื่อถือ `X-Forwarded-For` แบบไม่จำกัด
+ตอน `NODE_ENV=production` ต้องตั้งค่านี้เอง ไม่งั้น Backend ไม่ยอม start
+เพราะ login lockout ล็อกแยกตาม IP ถ้าตั้ง `0` ทั้งที่อยู่หลัง proxy ทุกคนจะได้ IP
+ของ proxy และ lockout จะล็อกทั้งบัญชี ถ้าตั้งสูงเกินจริง ผู้โจมตีปลอม
+`X-Forwarded-For` เพื่อหมุน IP ได้
 
 ## Database Setup
 

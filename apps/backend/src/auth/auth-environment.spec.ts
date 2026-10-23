@@ -53,6 +53,23 @@ describe('requireAuthEnvironment', () => {
     ).toThrow('COOKIE_SECURE must be true in production');
   });
 
+  it('requires an explicit trusted proxy hop count in production', () => {
+    const production = {
+      ...validEnvironment,
+      NODE_ENV: 'production',
+      COOKIE_SECURE: 'true',
+      FRONTEND_URL: 'https://admin.example.com',
+    };
+
+    expect(() => requireAuthEnvironment(production)).toThrow(
+      'TRUST_PROXY_HOPS must be set in production',
+    );
+    expect(
+      requireAuthEnvironment({ ...production, TRUST_PROXY_HOPS: '0' })
+        .trustProxyHops,
+    ).toBe(0);
+  });
+
   it('accepts only an explicit bounded trusted proxy hop count', () => {
     expect(
       requireAuthEnvironment({

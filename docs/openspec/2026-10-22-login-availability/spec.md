@@ -1,7 +1,8 @@
 # Spec: ความทนทานของ login และ credential
 
-Status: ready-for-agent
+Status: done
 Started: 2026-10-22
+Done: 2026-10-23
 
 ## Problem Statement
 
