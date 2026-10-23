@@ -22,6 +22,11 @@ export function requireAuthEnvironment(
   if (Buffer.byteLength(tokenPepper) < 32) {
     throw new Error('AUTH_TOKEN_PEPPER must be at least 32 bytes');
   }
+  if (jwtAccessSecret === tokenPepper) {
+    throw new Error(
+      'JWT_ACCESS_SECRET and AUTH_TOKEN_PEPPER must be different',
+    );
+  }
   if (!frontendUrl) {
     throw new Error('Missing required environment variable: FRONTEND_URL');
   }

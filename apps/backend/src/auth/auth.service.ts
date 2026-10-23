@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { AuthUser } from '@spk-r5-parking-log/shared-types';
+import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
 
 import { DomainError } from '../common/domain-error';
@@ -236,6 +237,18 @@ export class AuthService {
         'Current password is incorrect',
       );
     }
+    if (
+      await this.passwordService.verify(
+        currentUser.passwordHash,
+        input.newPassword,
+      )
+    ) {
+      throw new DomainError(
+        400,
+        'AUTH_PASSWORD_REUSED',
+        'New password must differ from the current password',
+      );
+    }
 
     const now = new Date();
     const passwordHash = await this.passwordService.hash(input.newPassword);
@@ -376,7 +389,7 @@ export class AuthService {
     value: string,
   ): { sessionId: string; secret: string } | null {
     const parts = value.split('.');
-    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    if (parts.length !== 2 || !parts[0] || !parts[1] || !isUUID(parts[0])) {
       return null;
     }
 

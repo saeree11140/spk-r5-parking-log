@@ -4,7 +4,7 @@
 
 staff ต้องเลือกหมวดทุกครั้งที่บันทึก violation ส่วนหน้าบ้านแสดงรอบปัจจุบันแยกตามหมวด
 
-ticket นี้ต้องแก้ backend กับ frontend พร้อมกัน เพราะ `HouseSummary.currentCycle` เปลี่ยนเป็น `currentCycles` ซึ่งเป็น breaking change ดูรายละเอียดใน spec ที่ `.scratch/violation-categories/spec.md`
+ticket นี้ต้องแก้ backend กับ frontend พร้อมกัน เพราะ `HouseSummary.currentCycle` เปลี่ยนเป็น `currentCycles` ซึ่งเป็น breaking change ดูรายละเอียดใน spec ที่ `docs/openspec/2026-10-11-violation-categories/spec.md`
 
 **Blocked by:** 01 (กติกาค่าปรับ V2 พร้อมเก็บเวอร์ชันไว้ที่รอบ)
 

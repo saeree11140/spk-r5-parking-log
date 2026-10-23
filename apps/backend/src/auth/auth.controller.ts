@@ -110,6 +110,10 @@ export class AuthController {
   }
 
   @AllowPasswordChange()
+  @SkipThrottle({ auth: false })
+  @Throttle({
+    auth: { limit: 10, ttl: 60_000, blockDuration: 60_000 },
+  })
   @Post('change-password')
   async changePassword(
     @Body() input: ChangePasswordDto,

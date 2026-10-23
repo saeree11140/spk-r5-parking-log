@@ -1,6 +1,8 @@
 # Spec: หมวดการกระทำผิด และกติกาค่าปรับใหม่
 
-Status: ready-for-agent
+Status: done
+Started: 2026-10-11
+Done: 2026-10-11
 
 ## Problem Statement
 

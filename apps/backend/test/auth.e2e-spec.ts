@@ -83,6 +83,25 @@ describe('Authentication and authorization (e2e)', () => {
       .expect(401);
   });
 
+  it('rejects a refresh cookie whose session id is not a UUID and clears cookies', async () => {
+    const csrf = 'malformed-refresh-csrf-token';
+
+    const response = await request(harness.app.getHttpServer())
+      .post('/api/auth/refresh')
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', csrf)
+      .set('Cookie', `spk_r5_refresh=not-a-uuid.secret; spk_r5_csrf=${csrf}`)
+      .expect(401);
+
+    expect(bodyAs<{ code: string }>(response).code).toBe(
+      'AUTH_INVALID_REFRESH',
+    );
+    const setCookie: unknown = response.headers['set-cookie'];
+    expect(setCookie).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^spk_r5_refresh=;/)]),
+    );
+  });
+
   it('allows STAFF parking mutation but denies user management', async () => {
     const staff = await harness.createUser('STAFF');
     const auth = await harness.login(staff);
@@ -131,6 +150,29 @@ describe('Authentication and authorization (e2e)', () => {
       })
       .expect(201);
     await auth.agent.get('/api/houses').expect(200);
+  });
+
+  it('rejects a forced password change that reuses the temporary password', async () => {
+    const staff = await harness.createUser('STAFF', {
+      mustChangePassword: true,
+    });
+    const auth = await harness.login(staff);
+
+    const response = await auth.agent
+      .post('/api/auth/change-password')
+      .set('Origin', harness.frontendUrl)
+      .set('X-CSRF-Token', auth.csrf)
+      .send({
+        currentPassword: staff.password,
+        newPassword: staff.password,
+        confirmPassword: staff.password,
+      })
+      .expect(400);
+
+    expect(bodyAs<{ code: string }>(response).code).toBe(
+      'AUTH_PASSWORD_REUSED',
+    );
+    await auth.agent.get('/api/houses').expect(403);
   });
 
   it('locks an account for 15 minutes on the fifth failed login', async () => {
@@ -232,6 +274,27 @@ describe('Authentication and authorization (e2e)', () => {
 
     await first.agent.get('/api/auth/me').expect(200);
     await second.agent.get('/api/auth/me').expect(401);
+  });
+
+  it('throttles repeated current-password guesses on change-password', async () => {
+    const staff = await harness.createUser('STAFF');
+    const auth = await harness.login(staff);
+    const guess = () =>
+      auth.agent
+        .post('/api/auth/change-password')
+        .set('Origin', harness.frontendUrl)
+        .set('X-Forwarded-For', staff.ipAddress)
+        .set('X-CSRF-Token', auth.csrf)
+        .send({
+          currentPassword: 'WrongPassword123',
+          newPassword: 'NewStrongPassword123',
+          confirmPassword: 'NewStrongPassword123',
+        });
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      await guess().expect(401);
+    }
+    await guess().expect(429);
   });
 
   it('returns the generic credentials error for inactive users', async () => {

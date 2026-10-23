@@ -222,7 +222,9 @@ describe('AuthService', () => {
   it('revokes other sessions when password changes', async () => {
     const { service, prisma, passwordService, calls } = setup();
     prisma.user.findUnique.mockResolvedValue(userRecord);
-    passwordService.verify.mockResolvedValue(true);
+    passwordService.verify.mockImplementation((_hash, password) =>
+      Promise.resolve(password === 'StrongPassword123'),
+    );
     const actor = authenticatedUser();
 
     await service.changePassword(actor, {

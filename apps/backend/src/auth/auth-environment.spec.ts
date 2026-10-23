@@ -32,6 +32,18 @@ describe('requireAuthEnvironment', () => {
     ).toThrow('JWT_ACCESS_SECRET must be at least 32 bytes');
   });
 
+  it('rejects a token pepper that reuses the JWT access secret', () => {
+    const sharedSecret = 's'.repeat(32);
+
+    expect(() =>
+      requireAuthEnvironment({
+        ...validEnvironment,
+        JWT_ACCESS_SECRET: sharedSecret,
+        AUTH_TOKEN_PEPPER: ` ${sharedSecret} `,
+      }),
+    ).toThrow('JWT_ACCESS_SECRET and AUTH_TOKEN_PEPPER must be different');
+  });
+
   it('requires secure cookies in production', () => {
     expect(() =>
       requireAuthEnvironment({

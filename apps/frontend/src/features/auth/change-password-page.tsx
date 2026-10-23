@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { ApiError } from "@/lib/api/api-error";
 import { authApi } from "@/lib/api/auth-api";
 import {
   changePasswordSchema,
@@ -94,9 +95,12 @@ export function ChangePasswordPage() {
           </label>
           {mutation.isError ? (
             <p className="form-error" role="alert">
-              {mutation.error instanceof Error
-                ? mutation.error.message
-                : "เปลี่ยนรหัสผ่านไม่สำเร็จ"}
+              {mutation.error instanceof ApiError &&
+              mutation.error.code === "AUTH_PASSWORD_REUSED"
+                ? "รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน"
+                : mutation.error instanceof Error
+                  ? mutation.error.message
+                  : "เปลี่ยนรหัสผ่านไม่สำเร็จ"}
             </p>
           ) : null}
           <Button disabled={mutation.isPending} type="submit" variant="primary">
