@@ -1,0 +1,70 @@
+# nginx virtual host for one SPK R5 Parking Log deployment.
+#
+# One file per domain. Several projects can share one VPS: give each its own
+# copy of this file with its own server_name, root and backend port.
+#
+# Replace every value marked CHANGE ME, then:
+#   sudo cp spk-r5-parking-log.conf.example /etc/nginx/sites-available/parking.example.com.conf
+#   sudo ln -s ../sites-available/parking.example.com.conf /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# The backend must run with:
+#   FRONTEND_URL=https://parking.example.com   (exact origin, used by CORS and CSRF)
+#   TRUST_PROXY_HOPS=1                         (nginx is the only proxy in front)
+#   COOKIE_SECURE=true
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name parking.example.com; # CHANGE ME
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    # `listen ... http2` rather than `http2 on;` so nginx < 1.25.1 (Ubuntu 24.04) works.
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name parking.example.com; # CHANGE ME
+
+    # Issued by: sudo certbot certonly --nginx -d parking.example.com
+    ssl_certificate     /etc/letsencrypt/live/parking.example.com/fullchain.pem; # CHANGE ME
+    ssl_certificate_key /etc/letsencrypt/live/parking.example.com/privkey.pem;   # CHANGE ME
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Output of `pnpm --filter frontend build` (apps/frontend/dist).
+    root /var/www/parking.example.com/dist; # CHANGE ME
+    index index.html;
+
+    server_tokens off;
+
+    # Inherited by every location below as long as a location does not set
+    # its own add_header. Cache rules therefore use `expires`, not add_header.
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "same-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001; # CHANGE ME: this project's BACKEND_PORT
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # Overwrite, never append: the backend trusts exactly one hop.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 1m;
+    }
+
+    # Vite puts a content hash in every asset file name.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # Single-page app: unknown paths get index.html, which must never be
+    # cached so a new deploy reaches users immediately.
+    location / {
+        expires -1;
+        try_files $uri /index.html;
+    }
+}

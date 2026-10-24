@@ -4,9 +4,16 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] CSP: `default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; style-src 'self' 'unsafe-inline'`
-- [ ] ตรวจ CSP กับ build จริง (`vite preview` ใส่ header เดียวกัน) ว่าไม่มี violation ใน console
-- [ ] `nginx -t` ผ่านกับไฟล์ตัวอย่าง (ถ้ามี nginx ในเครื่อง หรือใช้ container)
-- [ ] อัปเดต `apps/frontend/AGENTS.md` ที่ยังบอกว่าเป็น Next.js
+- [x] CSP: `default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; style-src 'self' 'unsafe-inline'`
+- [x] ตรวจ CSP กับ build จริง (`vite preview` ใส่ header เดียวกัน) ว่าไม่มี violation ใน console
+- [x] `nginx -t` ผ่านกับไฟล์ตัวอย่าง (ถ้ามี nginx ในเครื่อง หรือใช้ container)
+- [x] อัปเดต `apps/frontend/AGENTS.md` ที่ยังบอกว่าเป็น Next.js
+
+## Comments
+
+- ทดสอบกับ nginx จริงใน Docker (`nginx:stable`, cert self-signed): `nginx -t` ผ่าน, HTTP ได้ 301 ไป HTTPS, `/houses/R5-001` ได้ `index.html` แบบ `no-cache`, ไฟล์ใน `/assets/` cache 1 ปี, asset ที่ไม่มีได้ 404, `/api/health` proxy ถึง backend และทุก response มี HSTS, nosniff, Referrer-Policy และ CSP
+- CSP ต้องมี `font-src 'self' data:` เพราะ Vite ฝัง font ของ `@fontsource` ที่เล็กกว่า 4 KB เป็น `data:font/woff2`
+- ใช้ Playwright บน Chrome ผ่าน nginx กับ backend ที่ตั้ง `FRONTEND_URL=https://localhost:8443`, `TRUST_PROXY_HOPS=1`: login, dashboard, dialog บันทึก violation, date picker, หน้าผู้ใช้ + dialog สร้างผู้ใช้ และหน้า "ไม่พบบ้าน" ไม่มี CSP violation
+- คง `listen 443 ssl http2` ไว้ (มี deprecation warning บน nginx ใหม่) เพราะ `http2 on;` ใช้ไม่ได้กับ nginx < 1.25.1 เช่น Ubuntu 24.04
