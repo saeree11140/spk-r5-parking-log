@@ -1,0 +1,136 @@
+# Deploy บน Dokploy
+
+คู่มือนี้พาระบบขึ้น VPS ที่ติดตั้ง Dokploy แล้ว ระบบมี 3 service ใน Dokploy project เดียว:
+
+| Service | ประเภท | Image |
+|---|---|---|
+| `spk-r5-db` | Database (PostgreSQL) | `postgres:18.4-alpine3.23` |
+| `spk-r5-backend` | Application (Docker image) | `ghcr.io/saeree11140/spk-r5-parking-log-backend:latest` |
+| `spk-r5-frontend` | Application (Docker image) | `ghcr.io/saeree11140/spk-r5-parking-log-frontend:latest` |
+
+Image ถูก build โดย GitHub Actions ทุกครั้งที่ push `main` (`.github/workflows/ci.yml`) ห้าม build บน VPS เพราะเครื่องมี 1 vCPU และ RAM 1.9 GB
+
+ชื่อเมนูใน Dokploy อาจต่างไปเล็กน้อยตามเวอร์ชัน ค่าที่เขียนเป็น `<...>` ต้องแทนด้วยค่าจริง
+
+## ก่อนเริ่ม
+
+- Image ทั้งสองอยู่ใน GHCR และเป็น public (GitHub > Packages > package > Package settings > Change visibility) ถ้ายังเป็น private ต้องเพิ่ม registry `ghcr.io` ใน Dokploy พร้อม token ที่มีสิทธิ์ `read:packages`
+- มีโดเมนที่ชี้ A record มาที่ IP ของ VPS เช่น `parking.<domain>` ระหว่างยังไม่มีโดเมนใช้ `<ip>.sslip.io` ทดสอบได้
+- ทำขั้นตอนตั้งค่าเครื่องใน `docs/deploy/vps-setup.md` แล้ว (Ubuntu Pro, swap, firewall)
+
+## 1. Database
+
+1. สร้าง project ใหม่ชื่อ `spk-r5-parking-log`
+2. ใน project สร้าง Database > PostgreSQL ชื่อ `spk-r5-db`
+   - Docker image: `postgres:18.4-alpine3.23`
+   - Database name: `spk_r5_parking_log`
+   - User: `spk_r5`
+   - Password: ให้ Dokploy สุ่ม หรือสร้างด้วย `openssl rand -hex 24`
+3. **ห้ามตั้ง External Port** ฐานข้อมูลต้องคุยได้เฉพาะภายใน network ของ Dokploy
+4. Advanced > Resources: Memory Limit `256 MB` (บางเวอร์ชันกรอกเป็น byte: `268435456`)
+5. Advanced > Command (ถ้ามี) ใส่ `postgres -c shared_buffers=64MB -c max_connections=20`
+6. Deploy แล้วจดค่า Internal Connection URL ไว้ใช้เป็น `DATABASE_URL` ของ backend (host คือชื่อ service ภายใน ไม่ใช่ `localhost`)
+
+## 2. Backend
+
+1. สร้าง Application ชื่อ `spk-r5-backend` เลือก Provider: Docker
+   - Docker image: `ghcr.io/saeree11140/spk-r5-parking-log-backend:latest`
+2. Environment:
+
+   | ตัวแปร | ค่า | Secret |
+   |---|---|---|
+   | `DATABASE_URL` | Internal Connection URL จากขั้นที่ 1 | ใช่ |
+   | `NODE_ENV` | `production` | |
+   | `BACKEND_PORT` | `3001` | |
+   | `FRONTEND_URL` | `https://parking.<domain>` ตรงทุกตัวอักษร ไม่มี `/` ท้าย | |
+   | `COOKIE_SECURE` | `true` | |
+   | `TRUST_PROXY_HOPS` | `1` (Traefik เป็น proxy ชั้นเดียวหน้า backend) | |
+   | `JWT_ACCESS_SECRET` | `openssl rand -hex 32` | ใช่ |
+   | `AUTH_TOKEN_PEPPER` | `openssl rand -hex 32` คนละค่ากับข้างบน | ใช่ |
+
+   ถ้าเปิด proxy ของ Cloudflare (เมฆสีส้ม) จะมี proxy เพิ่มอีกชั้น ต้องคิด `TRUST_PROXY_HOPS` และการอ่าน IP ใหม่ ให้ใช้โหมด DNS only
+3. Domains: เพิ่ม
+   - Host: `parking.<domain>`
+   - Path: `/api`
+   - **Strip Path: ปิด** (backend ใช้ prefix `/api` เอง)
+   - Container Port: `3001`
+   - HTTPS: เปิด, Certificate: Let's Encrypt
+4. Advanced > Resources: Memory Limit `384 MB` (`402653184` byte) ตอนว่างใช้ราว 150 MB ที่เหลือเผื่อ argon2 ตอน login พร้อมกัน
+5. Deploy แล้วดู Logs ต้องเห็น `No pending migrations to apply` หรือรายการ `Applying migration` แล้วตามด้วย Nest เริ่มทำงาน Container รัน `prisma migrate deploy` เองทุกครั้งที่ start
+
+## 3. Frontend
+
+1. สร้าง Application ชื่อ `spk-r5-frontend` เลือก Provider: Docker
+   - Docker image: `ghcr.io/saeree11140/spk-r5-parking-log-frontend:latest`
+2. ไม่ต้องตั้ง environment frontend เรียก API ที่ `/api` บนโดเมนเดียวกันเสมอ
+3. Domains: เพิ่ม
+   - Host: `parking.<domain>`
+   - Path: `/`
+   - Container Port: `8080`
+   - HTTPS: เปิด, Certificate: Let's Encrypt
+4. Advanced > Resources: Memory Limit `32 MB` (`33554432` byte)
+5. Deploy
+
+Traefik เลือก router ที่ rule ยาวกว่าก่อน ฉะนั้น `parking.<domain>/api/*` ไป backend และ path อื่นทั้งหมดไป frontend frontend กับ API จึงอยู่ origin เดียวกันตามที่ CSRF ต้องการ
+
+ตรวจหลัง deploy:
+
+```bash
+curl -s https://parking.<domain>/api/health          # {"status":"ok",...}
+curl -sI https://parking.<domain>/houses/R5-001       # 200, Content-Security-Policy, Cache-Control: no-cache
+```
+
+## 4. Seed ครั้งแรก (ทำครั้งเดียว)
+
+Seed สร้างบ้าน R5-001 ถึง R5-164, หมวดการกระทำผิดเริ่มต้น และ ADMIN คนแรก รันซ้ำได้โดยไม่ทับข้อมูลเดิม แต่ไม่ต้องรันอีกหลังครั้งแรก
+
+ไม่เก็บ `ADMIN_PASSWORD` ไว้ใน environment ของ service ให้ส่งเฉพาะตอนรันบน VPS:
+
+```bash
+read -r  ADMIN_USERNAME          # เช่น admin
+read -rs ADMIN_PASSWORD          # 12–128 ตัว มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก และตัวเลข (ไม่แสดงบนจอ)
+read -r  ADMIN_DISPLAY_NAME
+export ADMIN_USERNAME ADMIN_PASSWORD ADMIN_DISPLAY_NAME
+
+BACKEND=$(docker ps -q -f name=spk-r5-backend | head -1)
+docker exec -e ADMIN_USERNAME -e ADMIN_PASSWORD -e ADMIN_DISPLAY_NAME "$BACKEND" node dist/scripts/seed.js
+
+unset ADMIN_USERNAME ADMIN_PASSWORD ADMIN_DISPLAY_NAME
+```
+
+Login ครั้งแรก ระบบบังคับให้ ADMIN เปลี่ยนรหัสผ่าน
+
+## 5. ล้าง session ที่หมดอายุวันละครั้ง
+
+ใน `spk-r5-backend` > Schedules (ถ้า Dokploy เวอร์ชันนี้มี) เพิ่มงาน:
+
+- Cron: `0 3 * * *`
+- Command: `node dist/scripts/cleanup-auth-sessions.js`
+
+ถ้าไม่มีเมนู Schedules ใช้ cron บน host (`sudo crontab -e`):
+
+```cron
+0 3 * * * docker exec $(docker ps -q -f name=spk-r5-backend | head -1) node dist/scripts/cleanup-auth-sessions.js
+```
+
+## Deploy เวอร์ชันใหม่
+
+1. Merge เข้า `main` แล้ว push
+2. รอ GitHub Actions ผ่านทั้ง job `check` และ `images`
+3. Dokploy > `spk-r5-backend` > Deploy แล้ว `spk-r5-frontend` > Deploy
+
+Migration ใหม่ถูก apply เองตอน backend start ถ้าจะย้อนเวอร์ชัน ให้เปลี่ยน image tag จาก `latest` เป็น `sha-<commit>` ของเวอร์ชันก่อนแล้ว Deploy (migration ที่ apply ไปแล้วจะไม่ถูกย้อน ต้องดูว่าเวอร์ชันเก่ายังใช้ schema ใหม่ได้)
+
+Image ของ backend ใหญ่ราว 600 MB และ disk ของ VPS มีจำกัด ให้ลบ image เก่าเป็นระยะ:
+
+```bash
+docker image prune -a --filter "until=168h"
+```
+
+## ปลดล็อกบัญชีฉุกเฉิน
+
+ถ้า ADMIN คนเดียวถูกล็อก:
+
+```bash
+docker exec $(docker ps -q -f name=spk-r5-backend | head -1) node dist/scripts/unlock-user.js <username>
+```

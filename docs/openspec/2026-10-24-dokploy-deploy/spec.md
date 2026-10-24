@@ -20,9 +20,13 @@ VPS ของ Hostatom (Ubuntu 20.04, 1 vCPU, RAM 1.9 GiB ไม่มี swap, 
 - memory limit: backend 384 MB, Postgres 256 MB (`shared_buffers=64MB`, `max_connections=20`), frontend 32 MB
 - image เป็นสถาปัตยกรรมเดียวตามผล `uname -m` ของ VPS (รอข้อมูล)
 
-## Out of Scope (รอคำตอบ Hostatom ticket #JHJ-806230)
+## ตั้งค่าเครื่อง (คำตอบ Hostatom ticket #JHJ-806230)
 
-- firewall (เปิดแค่ 22, 80, 443 และปิด `:3000` ของ Dokploy กับ port ของ Docker Swarm)
-- swap, อัปเกรด Ubuntu หรือเปิด Ubuntu Pro, user ที่ไม่ใช่ root
-- โดเมน, HTTPS, โดเมนของหน้า Dokploy, ค่า `FRONTEND_URL` และ `TRUST_PROXY_HOPS` จริง
-- ปลายทาง backup (บน VPS 7 วัน + ส่งออกนอกเครื่อง เช่น Cloudflare R2)
+- ไม่มี firewall ระดับ network ต้องใช้ `ufw` บนเครื่อง และใช้ chain `DOCKER-USER` สำหรับ port ที่ Docker publish (issue 08, 09)
+- เพิ่ม swap เองได้ (issue 07)
+- ไม่มี snapshot/backup และ reinstall OS ทำให้ข้อมูลหายทั้งหมด จึงไม่อัปเกรด OS แต่เปิด Ubuntu Pro แทน (issue 06)
+- โดเมน `.com` ที่ Hostatom 450 บาท/ปี แต่ไม่มีหน้าจัดการ DNS ต้องใช้ DNS ภายนอก เช่น Cloudflare (DNS only)
+
+## Out of Scope
+
+- ปลายทาง backup (บน VPS 7 วัน + ส่งออกนอกเครื่อง เช่น Cloudflare R2) รอมีโดเมนและ deploy จริงก่อน
