@@ -51,8 +51,8 @@ describe("apiClient", () => {
       "spk_r5_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
   });
 
-  it("uses the configured API URL and ten-second timeout", () => {
-    expect(apiClient.defaults.baseURL).toBe("http://localhost:3001/api");
+  it("calls the same-origin /api by default with a ten-second timeout", () => {
+    expect(apiClient.defaults.baseURL).toBe("/api");
     expect(apiClient.defaults.timeout).toBe(10_000);
   });
 

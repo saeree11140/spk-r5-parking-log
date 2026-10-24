@@ -1,9 +1,7 @@
-"use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +16,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { useAuthStore } from "@/stores/auth-store";
 
 export function LoginPage() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setAuthenticated = useAuthStore((state) => state.setAuthenticated);
   const form = useForm<LoginFormInput, unknown, LoginFormValues>({
@@ -30,7 +28,10 @@ export function LoginPage() {
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.auth, user);
       setAuthenticated(user);
-      router.replace(user.mustChangePassword ? "/change-password" : "/");
+      void navigate({
+        to: user.mustChangePassword ? "/change-password" : "/",
+        replace: true,
+      });
     },
   });
 

@@ -4,13 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/api-error";
 import { authApi } from "@/lib/api/auth-api";
-import { renderWithQueryClient } from "@/test/render";
+import { renderWithRouter } from "@/test/render";
 
 import { LoginPage } from "./login-page";
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
-}));
 vi.mock("@/lib/api/auth-api", () => ({
   authApi: { login: vi.fn() },
 }));
@@ -28,7 +25,7 @@ describe("LoginPage", () => {
       ),
     );
 
-    renderWithQueryClient(<LoginPage />);
+    await renderWithRouter(<LoginPage />, { path: "/login" });
     await user.type(screen.getByLabelText("ชื่อผู้ใช้"), "admin");
     await user.type(screen.getByLabelText("รหัสผ่าน"), "WrongPassword123");
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));
@@ -41,14 +38,10 @@ describe("LoginPage", () => {
   it("tells a user with the right password that the account is locked", async () => {
     const user = userEvent.setup();
     vi.mocked(authApi.login).mockRejectedValue(
-      new ApiError(
-        "Account is temporarily locked",
-        "AUTH_ACCOUNT_LOCKED",
-        423,
-      ),
+      new ApiError("Account is temporarily locked", "AUTH_ACCOUNT_LOCKED", 423),
     );
 
-    renderWithQueryClient(<LoginPage />);
+    await renderWithRouter(<LoginPage />, { path: "/login" });
     await user.type(screen.getByLabelText("ชื่อผู้ใช้"), "admin");
     await user.type(screen.getByLabelText("รหัสผ่าน"), "StrongPassword123");
     await user.click(screen.getByRole("button", { name: "เข้าสู่ระบบ" }));

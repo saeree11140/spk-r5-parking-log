@@ -32,7 +32,7 @@ Violation ที่ยังแก้ไขได้ ปุ่มนี้เป
 
 ## Tech Stack
 
-- Next.js App Router และ TypeScript
+- Vite, TanStack Router (file-based ใน `src/routes/`) และ TypeScript
 - TanStack Query และ Axios สำหรับ Server State/API
 - React Hook Form และ Zod สำหรับ Form/Validation
 - Zustand สำหรับ Auth/UI State โดยไม่เก็บ token
@@ -42,11 +42,11 @@ Violation ที่ยังแก้ไขได้ ปุ่มนี้เป
 
 ## Environment
 
-สร้างไฟล์ `apps/frontend/.env.local`:
+Frontend เรียก API ที่ `/api` บน origin เดียวกัน `pnpm dev:frontend` เปิด Vite ที่
+port 3000 และ proxy `/api` ไปที่ `http://localhost:3001` จึงไม่ต้องมี `.env.local`
+ถ้า API อยู่ที่ path อื่นให้ตั้ง `VITE_API_URL` ก่อน build
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-```
+`pnpm --filter frontend build` สร้าง static file ใน `apps/frontend/dist/`
 
 หากรัน Frontend ด้วย Port อื่น ต้องตั้ง `FRONTEND_URL` ของ Backend ให้ตรงกัน เช่น:
 

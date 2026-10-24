@@ -1,4 +1,3 @@
-"use client";
 
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { type ComponentProps } from "react";

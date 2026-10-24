@@ -1,26 +1,20 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/api-error";
 import { authApi } from "@/lib/api/auth-api";
 import { makeAuthUser } from "@/test/fixtures";
-import { renderWithQueryClient } from "@/test/render";
+import { renderWithRouter } from "@/test/render";
 
 import { ChangePasswordPage } from "./change-password-page";
 
-const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace }),
-}));
 vi.mock("@/lib/api/auth-api", () => ({
   authApi: { changePassword: vi.fn() },
 }));
 
 describe("ChangePasswordPage", () => {
   afterEach(() => {
-    replace.mockReset();
     vi.mocked(authApi.changePassword).mockReset();
   });
 
@@ -30,7 +24,9 @@ describe("ChangePasswordPage", () => {
       makeAuthUser({ mustChangePassword: false }),
     );
 
-    renderWithQueryClient(<ChangePasswordPage />);
+    const { router } = await renderWithRouter(<ChangePasswordPage />, {
+      path: "/change-password",
+    });
     await user.type(
       screen.getByLabelText("รหัสผ่านปัจจุบัน"),
       "CurrentPassword123",
@@ -43,7 +39,7 @@ describe("ChangePasswordPage", () => {
     await user.click(screen.getByRole("button", { name: "เปลี่ยนรหัสผ่าน" }));
 
     expect(authApi.changePassword).toHaveBeenCalled();
-    expect(replace).toHaveBeenCalledWith("/");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   });
 
   it("explains that the new password must differ from the current one", async () => {
@@ -56,7 +52,9 @@ describe("ChangePasswordPage", () => {
       ),
     );
 
-    renderWithQueryClient(<ChangePasswordPage />);
+    const { router } = await renderWithRouter(<ChangePasswordPage />, {
+      path: "/change-password",
+    });
     await user.type(
       screen.getByLabelText("รหัสผ่านปัจจุบัน"),
       "CurrentPassword123",
@@ -74,6 +72,6 @@ describe("ChangePasswordPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน",
     );
-    expect(replace).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe("/change-password");
   });
 });

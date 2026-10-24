@@ -1,6 +1,6 @@
 import type { HouseSummary } from "@spk-r5-parking-log/shared-types";
 import { ArrowUpRight } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { CategoryFilter } from "@/stores/dashboard-store";
@@ -51,7 +51,8 @@ export function HouseTable({
                   <td>
                     <Link
                       className="detail-link"
-                      href={`/houses/${house.code}`}
+                      params={{ houseCode: house.code }}
+                      to="/houses/$houseCode"
                     >
                       ดูรายละเอียด
                       <ArrowUpRight aria-hidden="true" size={16} />

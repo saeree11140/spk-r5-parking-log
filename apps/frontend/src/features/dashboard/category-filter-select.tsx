@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import { useViolationCategoriesQuery } from "@/lib/query/use-violation-categories";
 import { ALL_CATEGORIES, useDashboardStore } from "@/stores/dashboard-store";

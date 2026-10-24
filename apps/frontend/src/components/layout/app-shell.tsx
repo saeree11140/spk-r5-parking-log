@@ -1,5 +1,3 @@
-"use client";
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   House,
@@ -10,8 +8,7 @@ import {
   PanelLeftOpen,
   Users,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -37,8 +34,8 @@ function isActiveRoute(pathname: string, href: string): boolean {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const collapsed = useDashboardStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useDashboardStore((state) => state.toggleSidebar);
@@ -51,7 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       queryClient.removeQueries({ queryKey: queryKeys.auth });
       queryClient.removeQueries({ queryKey: queryKeys.users });
       queryClient.removeQueries({ queryKey: queryKeys.houses });
-      router.replace("/login");
+      void navigate({ to: "/login", replace: true });
     },
   });
 
@@ -75,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 key={label}
                 aria-current={active ? "page" : undefined}
                 className={active ? "nav-link nav-link--active" : "nav-link"}
-                href={href}
+                to={href}
               >
                 <Icon aria-hidden="true" size={20} />
                 <span>{label}</span>
@@ -90,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ? "nav-link nav-link--active"
                   : "nav-link"
               }
-              href="/users"
+              to="/users"
             >
               <Users aria-hidden="true" size={20} />
               <span>ผู้ใช้งาน</span>
@@ -132,15 +129,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Button>
       </aside>
       <header className="mobile-header">
-        <Link className="mobile-brand" href="/">
+        <Link className="mobile-brand" to="/">
           <span className="brand-mark" aria-hidden="true">
             P
           </span>
           <strong>SPK R5 Parking Log</strong>
         </Link>
         <nav aria-label="เมนูมือถือ">
-          <Link href="/violation-categories">หมวดการกระทำผิด</Link>
-          {user?.role === "ADMIN" ? <Link href="/users">ผู้ใช้งาน</Link> : null}
+          <Link to="/violation-categories">หมวดการกระทำผิด</Link>
+          {user?.role === "ADMIN" ? <Link to="/users">ผู้ใช้งาน</Link> : null}
           <Button
             aria-label="ออกจากระบบ"
             disabled={logout.isPending}

@@ -1,6 +1,4 @@
-"use client";
-
-import { usePathname, useRouter } from "next/navigation";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -10,8 +8,8 @@ const LOGIN_PATH = "/login";
 const CHANGE_PASSWORD_PATH = "/change-password";
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const navigate = useNavigate();
   const { status, user } = useAuthStore();
 
   let destination: string | null = null;
@@ -32,8 +30,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (destination) router.replace(destination);
-  }, [destination, router]);
+    if (destination) void navigate({ to: destination, replace: true });
+  }, [destination, navigate]);
 
   if (status === "checking" || destination) {
     return (

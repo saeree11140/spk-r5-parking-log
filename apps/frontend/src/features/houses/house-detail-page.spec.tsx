@@ -10,7 +10,7 @@ import {
   makeViolation,
   PET_CATEGORY,
 } from "@/test/fixtures";
-import { renderWithQueryClient } from "@/test/render";
+import { renderWithRouter } from "@/test/render";
 
 import { HouseDetailPage } from "./house-detail-page";
 
@@ -90,7 +90,10 @@ describe("HouseDetailPage", () => {
       makeHouseDetail({ cycles: [] }),
     );
 
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
 
     expect(
       screen.getByRole("status", { name: "กำลังโหลดรายละเอียดบ้าน" }),
@@ -108,7 +111,10 @@ describe("HouseDetailPage", () => {
       )
       .mockResolvedValueOnce(house);
 
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     expect(
       await screen.findByText("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้"),
     ).toBeInTheDocument();
@@ -124,7 +130,10 @@ describe("HouseDetailPage", () => {
   it("renders breadcrumb, current summary and newest cycles first", async () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
 
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     expect(
       await screen.findByRole("heading", { name: "R5-001" }),
     ).toBeInTheDocument();
@@ -167,7 +176,10 @@ describe("HouseDetailPage", () => {
       }),
     );
 
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
 
     const summary = await screen.findByRole("region", { name: "สรุปบ้าน" });
     const parking = within(summary).getByRole("region", {
@@ -188,7 +200,10 @@ describe("HouseDetailPage", () => {
   it("labels the fine rule each cycle uses", async () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
 
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
 
     expect(
       within(
@@ -204,7 +219,10 @@ describe("HouseDetailPage", () => {
 
   it("orders active violations by sequence and cancelled records last", async () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
 
     const cycle = await screen.findByRole("region", {
       name: "จอดรถผิดระเบียบ Cycle 2",
@@ -222,7 +240,10 @@ describe("HouseDetailPage", () => {
 
   it("shows payment details and only valid row actions", async () => {
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     await screen.findByRole("heading", { name: "R5-001" });
 
     expect(screen.getByText("receipt-001")).toBeInTheDocument();
@@ -304,7 +325,10 @@ describe("HouseDetailPage", () => {
     });
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(paidCycleHouse);
 
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     await screen.findByRole("heading", { name: "R5-001" });
 
     expect(
@@ -318,7 +342,10 @@ describe("HouseDetailPage", () => {
   it("refreshes only when requested", async () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     await screen.findByRole("heading", { name: "R5-001" });
 
     await user.click(
@@ -331,7 +358,10 @@ describe("HouseDetailPage", () => {
   it("opens the selected create, edit, cancel and mark-paid dialogs", async () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouse").mockResolvedValue(house);
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     await screen.findByRole("heading", { name: "R5-001" });
 
     await user.click(screen.getByRole("button", { name: "เพิ่ม Violation" }));
@@ -417,7 +447,10 @@ describe("HouseDetailPage", () => {
       .mockResolvedValueOnce(house)
       .mockResolvedValueOnce(updatedHouse);
     vi.spyOn(parkingApi, "updateViolation").mockResolvedValue({} as never);
-    renderWithQueryClient(<HouseDetailPage houseCode="R5-001" />);
+    await renderWithRouter(<HouseDetailPage houseCode="R5-001" />, {
+      path: "$",
+      initialEntry: "/houses/R5-001",
+    });
     await screen.findByRole("heading", { name: "R5-001" });
 
     await user.click(

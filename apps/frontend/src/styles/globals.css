@@ -5,6 +5,7 @@
 
 :root {
   /* IBM Plex Sans Thai for every text role; numbers and codes included. */
+  --font-body: "IBM Plex Sans Thai";
   --font-system: var(--font-body);
   --canvas: #f3f6fb;
   --canvas-gradient: linear-gradient(180deg, #f8fbff 0%, #eef3fa 100%);
@@ -37,7 +38,9 @@
 
 html {
   min-height: 100%;
-  background: var(--canvas-gradient) fixed, var(--canvas);
+  background:
+    var(--canvas-gradient) fixed,
+    var(--canvas);
 }
 
 body {
@@ -1301,9 +1304,7 @@ tbody tr:hover {
   min-height: 100vh;
   padding: 48px 24px;
   place-items: center;
-  background:
-    var(--canvas-gradient),
-    var(--canvas);
+  background: var(--canvas-gradient), var(--canvas);
 }
 
 .password-card {
