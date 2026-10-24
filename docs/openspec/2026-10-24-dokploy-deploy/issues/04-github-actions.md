@@ -10,3 +10,11 @@
 - [ ] ขั้นไหนไม่ผ่าน image จะไม่ถูก push
 - [ ] image อยู่ที่ `ghcr.io/saeree11140/spk-r5-parking-log-backend` และ `-frontend` และ pull ได้โดยไม่ต้อง login
 - [ ] สถาปัตยกรรมตรงกับ VPS
+
+## Comments
+
+- VPS เป็น `x86_64` image จึง build เฉพาะ `linux/amd64` บน runner ของ GitHub ซึ่งเป็น amd64 อยู่แล้ว
+- job `check` รันทุก push และ PR: lint ทุก package, typecheck frontend, build backend/frontend, `pnpm test` และ backend e2e ที่มี `postgres:18.4-alpine3.23` เป็น service container ส่วน job `images` รันเฉพาะ push `main` หลัง `check` ผ่าน
+- ไม่รัน `tsc --noEmit` ของ backend เพราะ spec เดิมมี type error ค้างอยู่ (`nest build` ตรวจ type ของ `src` ให้แล้ว)
+- `actionlint` (Docker) ไม่เจอปัญหา ยังไม่ได้รันบน GitHub จริง
+- package ใน GHCR ที่สร้างครั้งแรกอาจเป็น private ต้องเปลี่ยนเป็น public ครั้งเดียวที่หน้า package settings
