@@ -4,7 +4,12 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `pnpm --filter frontend lint` ผ่าน
-- [ ] ลบ `eslint-config-next` ออกจาก dependency
+- [x] `pnpm --filter frontend lint` ผ่าน
+- [x] ลบ `eslint-config-next` ออกจาก dependency
+
+## Comments
+
+- ใช้ `@eslint/js` + `typescript-eslint` (recommended) + `eslint-plugin-react-hooks` (flat recommended) + `@tanstack/eslint-plugin-router` (flat/recommended) ไฟล์ `*.config.*` ใช้ global ของ Node
+- ignore `.next/` และ `out/` ที่เป็น build output เก่าของ Next ค้างในเครื่อง ลบสองโฟลเดอร์นี้ทิ้งได้
