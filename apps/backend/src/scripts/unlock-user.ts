@@ -1,8 +1,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
-import { unlockUser } from '../src/auth/unlock-user';
-import { requireDatabaseUrl } from '../src/database/environment';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { unlockUser } from '../auth/unlock-user';
+import { requireDatabaseUrl } from '../database/environment';
+import { PrismaClient } from '../generated/prisma/client';
 
 async function main(): Promise<void> {
   const username = process.argv[2]?.trim();

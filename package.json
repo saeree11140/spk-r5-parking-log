@@ -1,6 +1,7 @@
 {
   "name": "spk-r5-parking-log",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "dev:frontend": "pnpm --filter frontend dev",
