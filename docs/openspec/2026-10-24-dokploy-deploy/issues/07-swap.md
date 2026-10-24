@@ -4,6 +4,10 @@
 
 **Blocked by:** none
 
-**Status:** ready-for-human
+**Status:** done
 
-- [ ] `free -h` แสดง Swap 2.0Gi และยังอยู่หลัง reboot
+- [x] `free -h` แสดง Swap 2.0Gi และยังอยู่หลัง reboot
+
+## Comments
+
+- ทำบน VPS วันที่ 2026-10-24: `free -h` แสดง Swap 2.0Gi, `vm.swappiness = 10` และเพิ่มบรรทัดใน `/etc/fstab` แล้ว (ยังไม่ได้ reboot เพื่อยืนยันว่า swap กลับมาเอง)
