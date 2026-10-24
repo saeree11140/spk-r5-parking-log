@@ -1,18 +1,34 @@
+import js from "@eslint/js";
+import pluginRouter from "@tanstack/eslint-plugin-router";
+import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
 const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
+    "dist/**",
+    "coverage/**",
+    "src/routeTree.gen.ts",
+    // Leftover Next.js build output from before the Vite migration.
     ".next/**",
     "out/**",
-    "build/**",
-    "next-env.d.ts",
   ]),
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  reactHooks.configs.flat.recommended,
+  ...pluginRouter.configs["flat/recommended"],
+  {
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
+    files: ["*.config.{js,mjs,ts,mts}"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ]);
 
 export default eslintConfig;

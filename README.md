@@ -166,6 +166,50 @@ Build Shared Types:
 pnpm --filter @spk-r5-parking-log/shared-types build
 ```
 
+## Deploy Frontend บน VPS
+
+Frontend เป็น static file ล้วน วางบน VPS ที่มี nginx ได้เลย VPS เครื่องเดียวรับได้หลาย
+โปรเจกต์ แต่ละโดเมนเป็น nginx virtual host ของตัวเอง ชี้ `root` ไปที่ `dist/`
+ของโปรเจกต์นั้น และส่ง `/api` ไปที่ backend port ของโปรเจกต์นั้น ตัวอย่างอยู่ที่
+`deploy/nginx/spk-r5-parking-log.conf.example`
+
+Frontend กับ API ต้องอยู่โดเมนเดียวกัน เพราะ frontend อ่าน CSRF cookie จาก
+`document.cookie` ห้ามแยก API ไปไว้ใน subdomain อื่น
+
+1. Build บนเครื่องที่มี source:
+
+   ```bash
+   pnpm --filter frontend build
+   ```
+
+2. Copy `apps/frontend/dist/` ไปที่ VPS เช่น `/var/www/parking.example.com/dist`
+3. ขอ certificate ก่อนเปิด site (ต้องมี nginx ที่รับ port 80 อยู่แล้ว):
+
+   ```bash
+   sudo certbot certonly --nginx -d parking.example.com
+   ```
+
+4. Copy ไฟล์ตัวอย่างไปที่ `/etc/nginx/sites-available/parking.example.com.conf`
+   แก้ทุกค่าที่มี `CHANGE ME` (โดเมน, path ของ certificate, `root`, backend port)
+   แล้วเปิดใช้:
+
+   ```bash
+   sudo ln -s ../sites-available/parking.example.com.conf /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+5. Backend ของโดเมนนี้ต้องตั้ง `FRONTEND_URL=https://parking.example.com` (ตรงทุกตัวอักษร),
+   `TRUST_PROXY_HOPS=1`, `COOKIE_SECURE=true` และ `BACKEND_PORT` ไม่ซ้ำกับโปรเจกต์อื่นบนเครื่อง
+
+Deploy รอบถัดไปทำแค่ข้อ 1–2 nginx ส่ง `index.html` แบบ `no-cache` ส่วนไฟล์ใน
+`/assets/` มี hash ในชื่อและ cache 1 ปี ผู้ใช้จึงได้เวอร์ชันใหม่ทันที
+
+ไฟล์ตัวอย่างใส่ HSTS, `X-Content-Type-Options`, `Referrer-Policy` และ CSP ไว้แล้ว
+ถ้าเพิ่ม `add_header` ใน `location` ใด header ระดับ `server` จะไม่ถูกส่งใน location นั้น
+ให้ตั้ง cache ด้วย `expires` แทน
+
+การรัน backend และ PostgreSQL บน VPS ยังไม่อยู่ในเอกสารนี้
+
 ## Lint Commands
 
 ```bash
