@@ -4,12 +4,12 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] workflow รันผ่านบน GitHub จริง
-- [ ] ขั้นไหนไม่ผ่าน image จะไม่ถูก push
-- [ ] image อยู่ที่ `ghcr.io/saeree11140/spk-r5-parking-log-backend` และ `-frontend` และ pull ได้โดยไม่ต้อง login
-- [ ] สถาปัตยกรรมตรงกับ VPS
+- [x] workflow รันผ่านบน GitHub จริง
+- [x] ขั้นไหนไม่ผ่าน image จะไม่ถูก push
+- [x] image อยู่ที่ `ghcr.io/saeree11140/spk-r5-parking-log-backend` และ `-frontend` และ pull ได้โดยไม่ต้อง login
+- [x] สถาปัตยกรรมตรงกับ VPS
 
 ## Comments
 
@@ -21,3 +21,4 @@
 - run #1 (`33a8500`) ผ่าน: `check` 1m47s, Vitest 163/163, `images` ถูกข้ามเพราะไม่ใช่ `main` มี warning ว่า action รุ่นเก่าเขียนไว้สำหรับ Node 20 และ notice ว่า `ubuntu-latest` จะย้ายไป Ubuntu 26 ตั้งแต่ 2026-10-19
 - อัปเดต action เป็น major ล่าสุด (เช็กด้วย `git ls-remote`), pin `ubuntu-24.04` และให้ `images` build ทุก push แต่ push GHCR เฉพาะ `main` run #2 (`3c29b99`) ผ่านใน 4m32s
 - ยังเหลือ: push ขึ้น GHCR จริงจาก `main` และเปลี่ยน package เป็น public
+- push `main` (`09de0a2`) แล้ว image ขึ้น GHCR ทั้งสองตัว tag `latest` และ `sha-09de0a2...` เปลี่ยนเป็น public แล้ว ดึง manifest จาก GHCR ด้วย token แบบไม่ login ได้ เป็น `linux/amd64` + attestation manifest
