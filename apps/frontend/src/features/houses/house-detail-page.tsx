@@ -1,12 +1,10 @@
-"use client";
-
 import type {
   ViolationCategorySummary,
   ViolationResponse,
 } from "@spk-r5-parking-log/shared-types";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -75,7 +73,7 @@ export function HouseDetailPage({ houseCode }: { houseCode: string }) {
   return (
     <div className="page-stack">
       <nav aria-label="เส้นทางนำทาง" className="breadcrumbs">
-        <Link href="/">ภาพรวม</Link>
+        <Link to="/">ภาพรวม</Link>
         <span aria-hidden="true">/</span>
         <span>{house.code}</span>
       </nav>

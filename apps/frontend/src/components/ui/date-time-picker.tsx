@@ -1,4 +1,3 @@
-"use client";
 
 import { ChevronDownIcon } from "lucide-react";
 import { forwardRef, useEffect, useId, useRef, useState } from "react";

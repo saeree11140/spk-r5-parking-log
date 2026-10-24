@@ -1,5 +1,3 @@
-"use client";
-
 import type { UserSummary } from "@spk-r5-parking-log/shared-types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";

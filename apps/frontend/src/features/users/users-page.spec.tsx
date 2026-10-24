@@ -4,15 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { usersApi } from "@/lib/api/users-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { makeAuthUser } from "@/test/fixtures";
-import { renderWithQueryClient } from "@/test/render";
+import { renderWithRouter } from "@/test/render";
 
 import { UsersPage } from "./users-page";
 
-const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace }),
-}));
 vi.mock("@/lib/api/users-api", () => ({
   usersApi: {
     create: vi.fn(),
@@ -24,7 +19,6 @@ vi.mock("@/lib/api/users-api", () => ({
 
 describe("UsersPage", () => {
   afterEach(() => {
-    replace.mockReset();
     vi.clearAllMocks();
     useAuthStore.getState().setChecking();
   });
@@ -49,7 +43,7 @@ describe("UsersPage", () => {
       },
     ]);
 
-    renderWithQueryClient(<UsersPage />);
+    await renderWithRouter(<UsersPage />, { path: "/users" });
 
     expect(await screen.findByText("staff.one")).toBeInTheDocument();
     expect(screen.getByText("STAFF")).toBeInTheDocument();
@@ -66,7 +60,7 @@ describe("UsersPage", () => {
     useAuthStore.setState({ status: "authenticated", user: admin });
     vi.mocked(usersApi.list).mockResolvedValue([admin]);
 
-    renderWithQueryClient(<UsersPage />);
+    await renderWithRouter(<UsersPage />, { path: "/users" });
 
     await screen.findByText(admin.username);
     expect(
@@ -79,17 +73,5 @@ describe("UsersPage", () => {
         name: `Reset Password ${admin.username}`,
       }),
     ).not.toBeInTheDocument();
-  });
-
-  it("redirects STAFF without requesting user data", () => {
-    useAuthStore.setState({
-      status: "authenticated",
-      user: makeAuthUser({ role: "STAFF" }),
-    });
-
-    renderWithQueryClient(<UsersPage />);
-
-    expect(replace).toHaveBeenCalledWith("/");
-    expect(usersApi.list).not.toHaveBeenCalled();
   });
 });

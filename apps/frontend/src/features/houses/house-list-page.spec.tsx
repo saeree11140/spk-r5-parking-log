@@ -10,7 +10,7 @@ import {
   PARKING_CATEGORY,
   PET_CATEGORY,
 } from "@/test/fixtures";
-import { renderWithQueryClient } from "@/test/render";
+import { renderWithRouter } from "@/test/render";
 
 import { HouseListPage } from "./house-list-page";
 
@@ -76,7 +76,10 @@ describe("HouseListPage", () => {
       houses[1],
     ]);
 
-    renderWithQueryClient(<HouseListPage />);
+    await renderWithRouter(<HouseListPage />, {
+      path: "$",
+      initialEntry: "/houses",
+    });
 
     expect(
       screen.getByRole("heading", { name: "รายชื่อบ้าน" }),
@@ -94,7 +97,10 @@ describe("HouseListPage", () => {
   it("searches and filters houses through directory UI state", async () => {
     const user = userEvent.setup();
     vi.spyOn(parkingApi, "getHouses").mockResolvedValue(houses);
-    renderWithQueryClient(<HouseListPage />);
+    await renderWithRouter(<HouseListPage />, {
+      path: "$",
+      initialEntry: "/houses",
+    });
     await screen.findByText("R5-164");
 
     await user.type(
@@ -142,7 +148,10 @@ describe("HouseListPage", () => {
         sequenceNumber: 20,
       }),
     ]);
-    renderWithQueryClient(<HouseListPage />);
+    await renderWithRouter(<HouseListPage />, {
+      path: "$",
+      initialEntry: "/houses",
+    });
     expect(await screen.findByText("฿1,500")).toBeInTheDocument();
 
     await user.selectOptions(

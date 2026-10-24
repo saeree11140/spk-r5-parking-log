@@ -5,35 +5,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { authApi } from "@/lib/api/auth-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { makeAuthUser } from "@/test/fixtures";
-import { renderWithQueryClient } from "@/test/render";
+import { renderWithRouter } from "@/test/render";
 
 import { AppShell } from "./app-shell";
 
-const { navigation, replace } = vi.hoisted(() => ({
-  navigation: { pathname: "/" },
-  replace: vi.fn(),
-}));
-
-vi.mock("next/navigation", () => ({
-  usePathname: () => navigation.pathname,
-  useRouter: () => ({ replace }),
-}));
-
 describe("AppShell", () => {
   afterEach(() => {
-    replace.mockReset();
-    navigation.pathname = "/";
     vi.restoreAllMocks();
     useAuthStore.getState().setChecking();
   });
 
-  it("shows identity and user management only to admins", () => {
+  it("shows identity and user management only to admins", async () => {
     useAuthStore.setState({
       status: "authenticated",
       user: makeAuthUser({ displayName: "นิติบุคคล", role: "ADMIN" }),
     });
 
-    renderWithQueryClient(<AppShell>content</AppShell>);
+    await renderWithRouter(<AppShell>content</AppShell>, { path: "$" });
 
     expect(screen.getByText("นิติบุคคล")).toBeInTheDocument();
     expect(screen.getByText("ADMIN")).toBeInTheDocument();
@@ -44,26 +32,26 @@ describe("AppShell", () => {
     ).toBe(true);
   });
 
-  it("does not show user management to staff", () => {
+  it("does not show user management to staff", async () => {
     useAuthStore.setState({
       status: "authenticated",
       user: makeAuthUser({ role: "STAFF" }),
     });
 
-    renderWithQueryClient(<AppShell>content</AppShell>);
+    await renderWithRouter(<AppShell>content</AppShell>, { path: "$" });
 
     expect(
       screen.queryByRole("link", { name: "ผู้ใช้งาน" }),
     ).not.toBeInTheDocument();
   });
 
-  it("shows violation category management to staff", () => {
+  it("shows violation category management to staff", async () => {
     useAuthStore.setState({
       status: "authenticated",
       user: makeAuthUser({ role: "STAFF" }),
     });
 
-    renderWithQueryClient(<AppShell>content</AppShell>);
+    await renderWithRouter(<AppShell>content</AppShell>, { path: "$" });
 
     expect(
       screen
@@ -72,13 +60,13 @@ describe("AppShell", () => {
     ).toBe(true);
   });
 
-  it("links the house directory navigation to its own route", () => {
+  it("links the house directory navigation to its own route", async () => {
     useAuthStore.setState({
       status: "authenticated",
       user: makeAuthUser({ role: "STAFF" }),
     });
 
-    renderWithQueryClient(<AppShell>content</AppShell>);
+    await renderWithRouter(<AppShell>content</AppShell>, { path: "$" });
 
     expect(
       within(screen.getByRole("complementary")).getByRole("link", {
@@ -87,14 +75,16 @@ describe("AppShell", () => {
     ).toHaveAttribute("href", "/houses");
   });
 
-  it("marks the house directory active on its index route", () => {
-    navigation.pathname = "/houses";
+  it("marks the house directory active on its index route", async () => {
     useAuthStore.setState({
       status: "authenticated",
       user: makeAuthUser({ role: "STAFF" }),
     });
 
-    renderWithQueryClient(<AppShell>content</AppShell>);
+    await renderWithRouter(<AppShell>content</AppShell>, {
+      path: "$",
+      initialEntry: "/houses",
+    });
 
     expect(
       within(screen.getByRole("complementary")).getByRole("link", {
@@ -111,7 +101,9 @@ describe("AppShell", () => {
       user: makeAuthUser({ role: "ADMIN" }),
     });
 
-    renderWithQueryClient(<AppShell>content</AppShell>);
+    const { router } = await renderWithRouter(<AppShell>content</AppShell>, {
+      path: "$",
+    });
     await user.click(
       within(screen.getByRole("complementary")).getByRole("button", {
         name: "ออกจากระบบ",
@@ -124,6 +116,6 @@ describe("AppShell", () => {
     await waitFor(() =>
       expect(useAuthStore.getState().status).toBe("authenticated"),
     );
-    expect(replace).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe("/");
   });
 });

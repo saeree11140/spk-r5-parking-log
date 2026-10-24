@@ -1,10 +1,7 @@
-"use client";
-
 import type { UserSummary } from "@spk-r5-parking-log/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +20,6 @@ import { ResetPasswordModal } from "./reset-password-modal";
 import { UserTable } from "./user-table";
 
 export function UsersPage() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((state) => state.user);
   const isAdmin = currentUser?.role === "ADMIN";
@@ -44,10 +40,6 @@ export function UsersPage() {
       setNotice(`${target.isActive ? "ปิด" : "เปิด"}บัญชีแล้ว`);
     },
   });
-
-  useEffect(() => {
-    if (currentUser && !isAdmin) router.replace("/");
-  }, [currentUser, isAdmin, router]);
 
   if (!isAdmin) return null;
 

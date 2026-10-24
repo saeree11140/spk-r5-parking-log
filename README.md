@@ -10,7 +10,7 @@ Monorepo สำหรับระบบบันทึกและติดต�
 
 ## Tech Stack
 
-- Frontend: Next.js, App Router, TypeScript, Tailwind CSS
+- Frontend: Vite, TanStack Router, TypeScript, Tailwind CSS
 - Backend: NestJS, TypeScript
 - Database: PostgreSQL 18.4
 - ORM: Prisma ORM 7 with PostgreSQL Driver Adapter
@@ -52,10 +52,12 @@ pnpm install
 
 ใช้ `.env.example` เป็นรายการตัวแปรอ้างอิง
 
-Frontend โหลด `NEXT_PUBLIC_API_URL` จาก `apps/frontend/.env.local` ได้อัตโนมัติ:
+Frontend เรียก API ที่ `/api` บน origin เดียวกันเสมอ ตอน dev Vite proxy `/api`
+ไปที่ `http://localhost:3001` จึงไม่ต้องตั้งค่าอะไร ถ้า API อยู่ที่ path อื่นให้ตั้ง
+`VITE_API_URL` ใน `apps/frontend/.env.local` ก่อน build:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+VITE_API_URL=/api
 ```
 
 Backend อ่านตัวแปรจาก Process Environment หากไม่กำหนดจะใช้ Port 3001 และ Frontend URL สำหรับ Local Development:

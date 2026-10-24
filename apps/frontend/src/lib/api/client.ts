@@ -53,7 +53,7 @@ function normalizeError(error: unknown): ApiError {
 }
 
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api",
+  baseURL: import.meta.env.VITE_API_URL ?? "/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -62,7 +62,7 @@ export const apiClient = axios.create({
 });
 
 export const authRefreshClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api",
+  baseURL: import.meta.env.VITE_API_URL ?? "/api",
   headers: {
     "Content-Type": "application/json",
   },
