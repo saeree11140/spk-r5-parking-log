@@ -9,17 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as UsersRouteImport } from './routes/users'
-import { Route as ViolationCategoriesRouteImport } from './routes/violation-categories'
-import { Route as HousesIndexRouteImport } from './routes/houses/index'
-import { Route as HousesHouseCodeRouteImport } from './routes/houses/$houseCode'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedViolationCategoriesRouteImport } from './routes/_authenticated/violation-categories'
+import { Route as AuthenticatedHousesIndexRouteImport } from './routes/_authenticated/houses/index'
+import { Route as AuthenticatedHousesHouseCodeRouteImport } from './routes/_authenticated/houses/$houseCode'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChangePasswordRoute = ChangePasswordRouteImport.update({
@@ -32,54 +32,63 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersRoute = UsersRouteImport.update({
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ViolationCategoriesRoute = ViolationCategoriesRouteImport.update({
-  id: '/violation-categories',
-  path: '/violation-categories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HousesIndexRoute = HousesIndexRouteImport.update({
-  id: '/houses/',
-  path: '/houses/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HousesHouseCodeRoute = HousesHouseCodeRouteImport.update({
-  id: '/houses/$houseCode',
-  path: '/houses/$houseCode',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedViolationCategoriesRoute =
+  AuthenticatedViolationCategoriesRouteImport.update({
+    id: '/violation-categories',
+    path: '/violation-categories',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHousesIndexRoute =
+  AuthenticatedHousesIndexRouteImport.update({
+    id: '/houses/',
+    path: '/houses/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHousesHouseCodeRoute =
+  AuthenticatedHousesHouseCodeRouteImport.update({
+    id: '/houses/$houseCode',
+    path: '/houses/$houseCode',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AuthenticatedIndexRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/users': typeof UsersRoute
-  '/violation-categories': typeof ViolationCategoriesRoute
-  '/houses/$houseCode': typeof HousesHouseCodeRoute
-  '/houses/': typeof HousesIndexRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/violation-categories': typeof AuthenticatedViolationCategoriesRoute
+  '/houses/$houseCode': typeof AuthenticatedHousesHouseCodeRoute
+  '/houses/': typeof AuthenticatedHousesIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/users': typeof UsersRoute
-  '/violation-categories': typeof ViolationCategoriesRoute
-  '/houses/$houseCode': typeof HousesHouseCodeRoute
-  '/houses': typeof HousesIndexRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/violation-categories': typeof AuthenticatedViolationCategoriesRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/houses/$houseCode': typeof AuthenticatedHousesHouseCodeRoute
+  '/houses': typeof AuthenticatedHousesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/users': typeof UsersRoute
-  '/violation-categories': typeof ViolationCategoriesRoute
-  '/houses/$houseCode': typeof HousesHouseCodeRoute
-  '/houses/': typeof HousesIndexRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/violation-categories': typeof AuthenticatedViolationCategoriesRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/houses/$houseCode': typeof AuthenticatedHousesHouseCodeRoute
+  '/_authenticated/houses/': typeof AuthenticatedHousesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -93,41 +102,38 @@ export interface FileRouteTypes {
     | '/houses/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/change-password'
     | '/login'
     | '/users'
     | '/violation-categories'
+    | '/'
     | '/houses/$houseCode'
     | '/houses'
   id:
     | '__root__'
-    | '/'
+    | '/_authenticated'
     | '/change-password'
     | '/login'
-    | '/users'
-    | '/violation-categories'
-    | '/houses/$houseCode'
-    | '/houses/'
+    | '/_authenticated/users'
+    | '/_authenticated/violation-categories'
+    | '/_authenticated/'
+    | '/_authenticated/houses/$houseCode'
+    | '/_authenticated/houses/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   ChangePasswordRoute: typeof ChangePasswordRoute
   LoginRoute: typeof LoginRoute
-  UsersRoute: typeof UsersRoute
-  ViolationCategoriesRoute: typeof ViolationCategoriesRoute
-  HousesHouseCodeRoute: typeof HousesHouseCodeRoute
-  HousesIndexRoute: typeof HousesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/change-password': {
@@ -144,45 +150,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users': {
-      id: '/users'
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
       path: '/users'
       fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/violation-categories': {
-      id: '/violation-categories'
+    '/_authenticated/violation-categories': {
+      id: '/_authenticated/violation-categories'
       path: '/violation-categories'
       fullPath: '/violation-categories'
-      preLoaderRoute: typeof ViolationCategoriesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedViolationCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/houses/': {
-      id: '/houses/'
+    '/_authenticated/houses/': {
+      id: '/_authenticated/houses/'
       path: '/houses'
       fullPath: '/houses/'
-      preLoaderRoute: typeof HousesIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedHousesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/houses/$houseCode': {
-      id: '/houses/$houseCode'
+    '/_authenticated/houses/$houseCode': {
+      id: '/_authenticated/houses/$houseCode'
       path: '/houses/$houseCode'
       fullPath: '/houses/$houseCode'
-      preLoaderRoute: typeof HousesHouseCodeRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedHousesHouseCodeRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedViolationCategoriesRoute: typeof AuthenticatedViolationCategoriesRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedHousesHouseCodeRoute: typeof AuthenticatedHousesHouseCodeRoute
+  AuthenticatedHousesIndexRoute: typeof AuthenticatedHousesIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedViolationCategoriesRoute: AuthenticatedViolationCategoriesRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedHousesHouseCodeRoute: AuthenticatedHousesHouseCodeRoute,
+  AuthenticatedHousesIndexRoute: AuthenticatedHousesIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   ChangePasswordRoute: ChangePasswordRoute,
   LoginRoute: LoginRoute,
-  UsersRoute: UsersRoute,
-  ViolationCategoriesRoute: ViolationCategoriesRoute,
-  HousesHouseCodeRoute: HousesHouseCodeRoute,
-  HousesIndexRoute: HousesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

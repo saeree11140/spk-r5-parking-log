@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { usersApi } from "@/lib/api/users-api";
@@ -73,19 +73,5 @@ describe("UsersPage", () => {
         name: `Reset Password ${admin.username}`,
       }),
     ).not.toBeInTheDocument();
-  });
-
-  it("redirects STAFF without requesting user data", async () => {
-    useAuthStore.setState({
-      status: "authenticated",
-      user: makeAuthUser({ role: "STAFF" }),
-    });
-
-    const { router } = await renderWithRouter(<UsersPage />, {
-      path: "/users",
-    });
-
-    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
-    expect(usersApi.list).not.toHaveBeenCalled();
   });
 });

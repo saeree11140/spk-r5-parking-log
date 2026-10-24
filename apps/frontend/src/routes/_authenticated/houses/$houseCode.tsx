@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { HouseDetailPage } from "@/features/houses/house-detail-page";
 
-export const Route = createFileRoute("/houses/$houseCode")({
+export const Route = createFileRoute("/_authenticated/houses/$houseCode")({
   component: HouseRoute,
 });
 

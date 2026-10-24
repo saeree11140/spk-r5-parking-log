@@ -14,6 +14,8 @@ import {
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 
+import { AppProviders } from "@/providers";
+
 export function createTestQueryClient(
   config: QueryClientConfig = {},
 ): QueryClient {
@@ -95,6 +97,32 @@ export async function renderWithRouter(
         <RouterProvider router={router} />
       </QueryClientProvider>,
       renderOptions,
+    ),
+  };
+}
+
+/**
+ * Renders the real application route tree, so route guards (beforeLoad,
+ * redirects, not-found) run exactly as in the browser.
+ */
+export async function renderApp(initialEntry: string) {
+  const { routeTree } = await import("@/routeTree.gen");
+  const queryClient = createTestQueryClient();
+  const router = createRouter({
+    routeTree,
+    context: { queryClient },
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
+  });
+
+  return {
+    router,
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <AppProviders>
+          <RouterProvider router={router} />
+        </AppProviders>
+      </QueryClientProvider>,
     ),
   };
 }

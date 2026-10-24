@@ -4,14 +4,16 @@ import "@fontsource/ibm-plex-sans-thai/600.css";
 import "@fontsource/ibm-plex-sans-thai/700.css";
 import "./styles/globals.css";
 
+import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { Providers } from "./providers";
+import { AppProviders, createQueryClient } from "./providers";
 import { routeTree } from "./routeTree.gen";
 
-const router = createRouter({ routeTree });
+const queryClient = createQueryClient();
+const router = createRouter({ routeTree, context: { queryClient } });
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -24,8 +26,10 @@ if (!rootElement) throw new Error("Missing #root element");
 
 createRoot(rootElement).render(
   <StrictMode>
-    <Providers>
-      <RouterProvider router={router} />
-    </Providers>
+    <QueryClientProvider client={queryClient}>
+      <AppProviders>
+        <RouterProvider router={router} />
+      </AppProviders>
+    </QueryClientProvider>
   </StrictMode>,
 );
