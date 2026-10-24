@@ -97,7 +97,54 @@ nc -vz -w 3 <ip> 2377            # ต้อง timeout หรือ refused
 
 ถ้าเข้า `https://panel.<domain>` ไม่ได้หลังข้อ 6 ให้ลบ block ที่เพิ่มใน `/etc/ufw/after.rules` แล้ว `ufw reload`
 
-## 5. ตรวจหลังตั้งค่า
+## 5. SSH ใช้ key แทนรหัสผ่าน
+
+ตอนนี้ login เป็น root ด้วยรหัสผ่านได้ และ port 22 เปิดสู่ internet bot จึงเดารหัสได้ตลอดเวลา
+
+**คำเตือน:** ถ้าปิด password login ก่อนที่ key จะใช้ได้จริง จะเข้าเครื่องไม่ได้อีก ต้องเข้าทาง console ของ Hostatom มาแก้ เปิด SSH session เดิมค้างไว้ตลอดจนทดสอบเสร็จ
+
+1. บน **Mac** สร้าง key (ถ้ายังไม่มี `~/.ssh/id_ed25519`) แล้วส่ง public key ขึ้นเครื่อง:
+
+   ```bash
+   ssh-keygen -t ed25519 -C "spk-r5-vps"
+   ssh-copy-id -i ~/.ssh/id_ed25519.pub root@<ip>
+   ```
+
+2. ทดสอบจาก Mac ต้องเข้าได้**โดยไม่ถามรหัสผ่าน** (อาจถาม passphrase ของ key):
+
+   ```bash
+   ssh -o PasswordAuthentication=no root@<ip> 'echo key-ok'
+   ```
+
+   ถ้าข้อนี้ไม่ได้ `key-ok` ให้หยุด ห้ามทำข้อ 3
+
+3. บน **VPS** สร้างไฟล์ config แยก (ไม่แก้ไฟล์หลัก):
+
+   ```bash
+   cat > /etc/ssh/sshd_config.d/10-key-only.conf <<'CONF'
+   PasswordAuthentication no
+   KbdInteractiveAuthentication no
+   PermitRootLogin prohibit-password
+   CONF
+   grep -i '^Include' /etc/ssh/sshd_config    # ต้องมี Include /etc/ssh/sshd_config.d/*.conf
+   sshd -t && systemctl reload ssh
+   sshd -T | grep -E 'passwordauthentication|permitrootlogin'
+   ```
+
+   ถ้า `/etc/ssh/sshd_config` ไม่มีบรรทัด `Include` ให้เพิ่มสามบรรทัดนั้นที่ต้นไฟล์ `/etc/ssh/sshd_config` แทน ค่าที่ขึ้นก่อนในไฟล์มีผล
+
+4. ทดสอบจาก Mac **ก่อนปิด session เดิม**:
+
+   ```bash
+   ssh root@<ip> 'echo key-ok'                                   # ต้องได้ key-ok
+   ssh -o PubkeyAuthentication=no root@<ip> 'echo pw'            # ต้องได้ Permission denied (publickey)
+   ```
+
+ถ้าเข้าไม่ได้ ให้ใช้ session เดิมหรือ console ลบ `/etc/ssh/sshd_config.d/10-key-only.conf` แล้ว `systemctl reload ssh`
+
+เก็บ private key (`~/.ssh/id_ed25519`) ไว้ให้ดี ถ้าหายต้องเข้าทาง console ของ Hostatom เพื่อเพิ่ม key ใหม่
+
+## 6. ตรวจหลังตั้งค่า
 
 ```bash
 ss -tlnp            # 80, 443 ยัง docker-proxy, 22 ยัง sshd
