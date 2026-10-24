@@ -1,7 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
-import { requireDatabaseUrl } from '../src/database/environment';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { requireDatabaseUrl } from '../database/environment';
+import { PrismaClient } from '../generated/prisma/client';
 
 async function main(): Promise<void> {
   const prisma = new PrismaClient({
