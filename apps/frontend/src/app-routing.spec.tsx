@@ -15,7 +15,7 @@ vi.mock("@/lib/api/auth-api", () => ({
 vi.mock("@/lib/api/parking-api", () => ({
   parkingApi: {
     getHouses: vi.fn().mockResolvedValue([]),
-    getHouse: vi.fn(),
+    getHouse: vi.fn().mockReturnValue(new Promise(() => undefined)),
     getViolationCategories: vi.fn().mockResolvedValue([]),
   },
 }));
@@ -40,6 +40,7 @@ describe("application routing", () => {
     vi.mocked(authApi.me).mockReset();
     vi.mocked(parkingApi.getHouses).mockClear();
     vi.mocked(usersApi.list).mockClear();
+    vi.mocked(parkingApi.getHouse).mockClear();
     useAuthStore.getState().setChecking();
   });
 
@@ -101,6 +102,32 @@ describe("application routing", () => {
     act(() => useAuthStore.getState().setUnauthenticated());
 
     await expectPath(router, "/login");
+  });
+
+  it.each(["/houses/R5-165", "/houses/R5-000", "/houses/abc"])(
+    "shows house not found for %s without requesting it",
+    async (path) => {
+      vi.mocked(authApi.me).mockResolvedValue(makeAuthUser());
+
+      await renderApp(path);
+
+      expect(await screen.findByText("ไม่พบบ้าน")).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "กลับหน้าภาพรวม" }),
+      ).toHaveAttribute("href", "/");
+      expect(parkingApi.getHouse).not.toHaveBeenCalled();
+    },
+  );
+
+  it("opens a house that exists", async () => {
+    vi.mocked(authApi.me).mockResolvedValue(makeAuthUser());
+
+    await renderApp("/houses/R5-164");
+
+    await waitFor(() =>
+      expect(parkingApi.getHouse).toHaveBeenCalledWith("R5-164"),
+    );
+    expect(screen.queryByText("ไม่พบบ้าน")).not.toBeInTheDocument();
   });
 
   it("re-checks the session when the page is restored from the back-forward cache", async () => {

@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] test: `/houses/R5-165` และ `/houses/abc` แสดงหน้า "ไม่พบบ้าน"
-- [ ] test: `/houses/R5-001` แสดงหน้ารายละเอียดบ้าน
+- [x] test: `/houses/R5-165` และ `/houses/abc` แสดงหน้า "ไม่พบบ้าน"
+- [x] test: `/houses/R5-001` แสดงหน้ารายละเอียดบ้าน
