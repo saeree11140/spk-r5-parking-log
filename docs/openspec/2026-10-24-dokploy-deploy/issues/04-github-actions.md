@@ -18,3 +18,6 @@
 - ไม่รัน `tsc --noEmit` ของ backend เพราะ spec เดิมมี type error ค้างอยู่ (`nest build` ตรวจ type ของ `src` ให้แล้ว)
 - `actionlint` (Docker) ไม่เจอปัญหา ยังไม่ได้รันบน GitHub จริง
 - package ใน GHCR ที่สร้างครั้งแรกอาจเป็น private ต้องเปลี่ยนเป็น public ครั้งเดียวที่หน้า package settings
+- run #1 (`33a8500`) ผ่าน: `check` 1m47s, Vitest 163/163, `images` ถูกข้ามเพราะไม่ใช่ `main` มี warning ว่า action รุ่นเก่าเขียนไว้สำหรับ Node 20 และ notice ว่า `ubuntu-latest` จะย้ายไป Ubuntu 26 ตั้งแต่ 2026-10-19
+- อัปเดต action เป็น major ล่าสุด (เช็กด้วย `git ls-remote`), pin `ubuntu-24.04` และให้ `images` build ทุก push แต่ push GHCR เฉพาะ `main` run #2 (`3c29b99`) ผ่านใน 4m32s
+- ยังเหลือ: push ขึ้น GHCR จริงจาก `main` และเปลี่ยน package เป็น public
