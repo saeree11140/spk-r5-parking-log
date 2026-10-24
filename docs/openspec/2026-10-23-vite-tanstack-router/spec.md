@@ -1,7 +1,8 @@
 # Spec: ย้าย frontend จาก Next.js ไป Vite + TanStack Router
 
-Status: ready-for-agent
+Status: done
 Started: 2026-10-23
+Done: 2026-10-24
 
 ## Problem Statement
 

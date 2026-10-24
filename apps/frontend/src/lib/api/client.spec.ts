@@ -324,7 +324,52 @@ describe("apiClient", () => {
     expect(counts.get("/auth/me")).toBe(2);
   });
 
+  it("does not refresh when the browser never had a session", async () => {
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: {
+        request: async (_name: string, callback: () => Promise<void>) =>
+          callback(),
+      },
+    });
+    const refresh = vi.fn(async (config: InternalAxiosRequestConfig) =>
+      success(config),
+    );
+    authRefreshClient.defaults.adapter = refresh;
+    const expired = vi.fn();
+    const unregister = registerAuthExpiredHandler(expired);
+    const adapter = async (config: InternalAxiosRequestConfig) => {
+      throw new AxiosError(
+        "Authentication required",
+        "ERR_BAD_REQUEST",
+        config,
+        undefined,
+        {
+          config,
+          data: {
+            statusCode: 401,
+            code: "AUTH_REQUIRED",
+            message: "Authentication required",
+          },
+          headers: {},
+          status: 401,
+          statusText: "Unauthorized",
+        },
+      );
+    };
+
+    await expect(apiClient.get("/auth/me", { adapter })).rejects.toMatchObject({
+      code: "AUTH_REQUIRED",
+      statusCode: 401,
+    });
+    unregister();
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(expired).toHaveBeenCalledTimes(1);
+  });
+
   it("coordinates refresh rotation through a cross-tab Web Lock", async () => {
+    document.cookie = "spk_r5_csrf=csrf-token; path=/";
     const request = vi.fn(
       async (_name: string, callback: () => Promise<void>) => callback(),
     );

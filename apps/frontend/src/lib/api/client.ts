@@ -168,6 +168,13 @@ apiClient.interceptors.response.use(
       return Promise.reject(normalizeError(error));
     }
 
+    // The CSRF cookie lives exactly as long as a session. Without it there is
+    // nothing to refresh, and the attempt would only spend the refresh throttle.
+    if (!readCsrfCookie()) {
+      authExpiredHandler?.();
+      return Promise.reject(normalizeError(error));
+    }
+
     const config = error.config as RetriableRequestConfig;
     config._authRetried = true;
 

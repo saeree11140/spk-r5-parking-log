@@ -1,5 +1,5 @@
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/api-error";
 import { authApi } from "@/lib/api/auth-api";
@@ -34,6 +34,10 @@ async function expectPath(
 }
 
 describe("application routing", () => {
+  // Loading every route module is slow under a parallel test run; keep it
+  // out of the first test's timeout.
+  beforeAll(() => import("@/routeTree.gen"), 30_000);
+
   afterEach(() => {
     // Unmount first: a mounted router would react to the store reset below.
     cleanup();
