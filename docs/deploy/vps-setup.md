@@ -69,6 +69,12 @@ nc -vz -w 3 <ip> 2377            # ต้อง timeout หรือ refused
 ตอนนี้หน้า admin ของ Dokploy เปิดเป็น HTTP ธรรมดาที่ `http://<ip>:3000` ใครก็เห็นหน้า login และรหัสผ่านวิ่งแบบไม่เข้ารหัส
 
 1. ตั้ง A record `panel.<domain>` ชี้ไปที่ IP ของ VPS
+   ถ้า Dokploy มากับเครื่องตั้งแต่แรก (image ของผู้ให้บริการ) ให้อัปเดตก่อน เวอร์ชันเก่าตอบ 400 ตอนกด Save โดเมนและไม่ตั้งค่า Traefik:
+
+   ```bash
+   docker images dokploy/dokploy --format '{{.ID}} {{.CreatedAt}}'   # ดูวันที่ build
+   curl -sSL https://dokploy.com/install.sh | sh -s update
+   ```
 2. Dokploy > Settings > Web Server (หรือ Server) > ตั้ง Domain เป็น `panel.<domain>` เปิด HTTPS ด้วย Let's Encrypt
 3. เปิด `https://panel.<domain>` แล้ว login ให้ได้ก่อน **ห้ามทำข้อ 4 ถ้ายังเข้าทาง HTTPS ไม่ได้**
 4. หาชื่อ network interface ที่ต่อ internet:

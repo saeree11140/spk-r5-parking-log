@@ -1,7 +1,8 @@
 # Spec: Deploy ระบบขึ้น VPS ที่ใช้ Dokploy
 
-Status: ready-for-agent
+Status: done
 Started: 2026-10-24
+Done: 2026-10-25
 
 ## Problem Statement
 
@@ -18,7 +19,7 @@ VPS ของ Hostatom (Ubuntu 20.04, 1 vCPU, RAM 1.9 GiB ไม่มี swap, 
 - Traefik ส่ง `/api` ไป backend และที่เหลือไป frontend บนโดเมนเดียว (CSRF ต้องการ origin เดียว)
 - `auth:sessions:cleanup` รันวันละครั้งด้วยการตั้งเวลารันของ Dokploy (ถ้าไม่มีใช้ cron บน host)
 - memory limit: backend 384 MB, Postgres 256 MB (`shared_buffers=64MB`, `max_connections=20`), frontend 32 MB
-- image เป็นสถาปัตยกรรมเดียวตามผล `uname -m` ของ VPS (รอข้อมูล)
+- image เป็น `linux/amd64` ตามผล `uname -m` ของ VPS (`x86_64`)
 
 ## ตั้งค่าเครื่อง (คำตอบ Hostatom ticket #JHJ-806230)
 
@@ -26,6 +27,12 @@ VPS ของ Hostatom (Ubuntu 20.04, 1 vCPU, RAM 1.9 GiB ไม่มี swap, 
 - เพิ่ม swap เองได้ (issue 07)
 - ไม่มี snapshot/backup และ reinstall OS ทำให้ข้อมูลหายทั้งหมด จึงไม่อัปเกรด OS แต่เปิด Ubuntu Pro แทน (issue 06)
 - โดเมน `.com` ที่ Hostatom 450 บาท/ปี แต่ไม่มีหน้าจัดการ DNS ต้องใช้ DNS ภายนอก เช่น Cloudflare (DNS only)
+
+## โดเมน
+
+- `spkr5.com` จดที่ Hostatom (หมดอายุ 2027-10-24) DNS อยู่ที่ Cloudflare แบบ DNS only (เมฆสีเทา) เพื่อให้ `TRUST_PROXY_HOPS=1` ถูกต้องและ Traefik ออก cert Let's Encrypt เองได้
+- `parking.spkr5.com`: ระบบ (frontend + `/api`)
+- `panel.spkr5.com`: หน้า admin ของ Dokploy
 
 ## Out of Scope
 
