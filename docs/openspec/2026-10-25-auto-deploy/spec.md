@@ -1,7 +1,8 @@
 # Spec: Deploy อัตโนมัติหลัง CI ผ่าน
 
-Status: in-progress
+Status: done
 Started: 2026-10-25
+Done: 2026-10-25
 
 ## Problem Statement
 
