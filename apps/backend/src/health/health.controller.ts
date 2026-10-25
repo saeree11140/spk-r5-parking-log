@@ -13,6 +13,8 @@ export class HealthController {
     return {
       status: 'ok',
       service: 'spk-r5-parking-log-api',
+      // Commit SHA baked into the image by CI; the deploy job waits for it.
+      version: process.env.APP_VERSION?.trim() || 'dev',
     };
   }
 }

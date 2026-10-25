@@ -26,6 +26,7 @@ describe('Health endpoint (e2e)', () => {
     await request(app.getHttpServer()).get('/api/health').expect(200).expect({
       status: 'ok',
       service: 'spk-r5-parking-log-api',
+      version: 'dev',
     });
   });
 });

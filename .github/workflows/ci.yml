@@ -90,5 +90,45 @@ jobs:
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: APP_VERSION=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  deploy:
+    needs: images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Holds the Dokploy webhook secrets. No reviewer: merging to main is the
+    # approval.
+    environment:
+      name: production
+      url: https://parking.spkr5.com
+    env:
+      SITE: https://parking.spkr5.com
+      EXPECTED_VERSION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # needs-deploy.sh diffs against the commit production runs.
+          fetch-depth: 0
+      - name: Decide what to deploy
+        id: plan
+        run: |
+          shared="packages/shared-types package.json pnpm-lock.yaml pnpm-workspace.yaml .dockerignore"
+          backend=$(deploy/ci/needs-deploy.sh "$(deploy/ci/deployed-version.sh backend "$SITE/api/health")" apps/backend $shared)
+          frontend=$(deploy/ci/needs-deploy.sh "$(deploy/ci/deployed-version.sh frontend "$SITE/version.txt")" apps/frontend $shared)
+          echo "backend=$backend frontend=$frontend"
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+      # Backend first so the new frontend never calls an old API.
+      - name: Deploy backend
+        if: steps.plan.outputs.backend == 'true'
+        env:
+          WEBHOOK_URL: ${{ secrets.DOKPLOY_BACKEND_WEBHOOK }}
+        run: deploy/ci/dokploy-deploy.sh backend "$SITE/api/health"
+      - name: Deploy frontend
+        if: steps.plan.outputs.frontend == 'true'
+        env:
+          WEBHOOK_URL: ${{ secrets.DOKPLOY_FRONTEND_WEBHOOK }}
+        run: deploy/ci/dokploy-deploy.sh frontend "$SITE/version.txt"
