@@ -158,3 +158,13 @@ free -h             # มี swap
 pro status          # esm-infra enabled
 docker service ls   # dokploy, dokploy-postgres, dokploy-redis 1/1
 ```
+
+## 7. เวลาเครื่องเป็นเวลาไทย
+
+เครื่องจาก Hostatom ตั้ง timezone เป็น `Europe/Berlin` (มีเปลี่ยนเวลาฤดูร้อน) cron บน host จึงรันเลื่อนจากที่ตั้งใจ ตั้งเป็นเวลาไทยแล้วเขียน cron เป็นเวลาไทยตรง ๆ container ของ Dokploy ยังใช้ UTC ตามเดิม (Schedule ของ Dokploy เป็น UTC ถ้าไม่ได้เลือก Timezone)
+
+```bash
+timedatectl set-timezone Asia/Bangkok
+systemctl restart cron
+date                # ต้องลงท้าย +07
+```

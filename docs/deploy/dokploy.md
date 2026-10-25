@@ -138,6 +138,49 @@ script ไม่พิมพ์อะไรเมื่อสำเร็จ `ec
 0 3 * * * docker exec $(docker ps -q -f name=spkr5parkinglog-spkr5backend | head -1) node dist/scripts/cleanup-auth-sessions.js
 ```
 
+## 6. Backup ฐานข้อมูล
+
+มี 2 ชุด: Dokploy ส่งขึ้น Backblaze B2 ทุกวัน 02:00 เวลาไทย และ script บน VPS เก็บไว้ในเครื่อง 7 วัน ทุกวัน 02:30 ไฟล์ใน B2 ถูกซ่อนเมื่ออายุ 30 วันและลบจริงหลังซ่อน 30 วัน key ที่ให้ Dokploy ลบไฟล์ไม่ได้ ถ้ามีคนเจาะ VPS ได้ก็ลบ backup ใน B2 ไม่ได้
+
+### B2
+
+1. สมัคร Backblaze B2 แล้วสร้าง bucket แบบ Private, Object Lock: Disable
+2. Bucket > Lifecycle Settings > Use custom lifecycle rules: File Path ว่าง, Days Till Hide `30`, Days Till Delete `30`
+3. สร้าง key บน Mac ด้วย `b2` CLI **ห้ามสร้างจากหน้าเว็บ** แบบ Read and Write ของหน้าเว็บมี `deleteFiles` และ `writeBucketLifecycleRules` ติดมาเสมอ:
+
+   ```bash
+   brew install b2-tools
+   b2 account authorize                 # keyID และ applicationKey ของ Master ผลมี key ห้ามแปะที่ไหน
+   b2 key create --bucket <bucket> dokploy-<project>-nodelete listBuckets,listFiles,readFiles,writeFiles
+   b2 account clear
+   ```
+
+   ผล `key create` เป็นบรรทัดเดียว: ค่าแรกคือ Access Key ID (25 ตัว) ค่าที่สองคือ Secret (`K005...`) แสดงครั้งเดียว จดใน password manager ทันที
+
+4. B2 S3 API ไม่รับ Master key (`InvalidAccessKeyId: Malformed Access Key Id`) ถ้า Master key หลุด ให้ App Keys > Generate New Master Application Key key อื่นยังใช้ได้
+
+### Dokploy
+
+1. Settings > S3 Destinations > Add: Provider `Other`, Access Key ID/Secret จากข้อ 3, Bucket, Region เช่น `us-east-005`, Endpoint เช่น `https://s3.us-east-005.backblazeb2.com` กด Test (Dokploy รัน `rclone ls`) แล้วกด Create ถ้า Test ล้ม ข้อความ error มี secret อยู่ อย่าแปะทั้งก้อน
+2. `spk-r5-db` > Backups > Create Backup: Destination ที่สร้าง, Database `spk_r5_parking_log`, Schedule `0 19 * * *` (Dokploy ใช้ UTC = 02:00 เวลาไทย), Prefix `daily/`, Keep the latest **ว่าง** (key ลบไฟล์ไม่ได้) ถ้าเลือก Destination แล้วช่องยังแสดง "Select Destination" กด Create ได้เลย
+3. กด ▶ ไฟล์จะอยู่ที่ `<ชื่อ service ฐานข้อมูล>/daily/<เวลา>.sql.gz` เป็น `pg_dump -Fc` ที่ gzip อีกชั้น
+4. แจ้งเตือน: Settings > Notifications > Email ผ่าน Gmail SMTP (`smtp.gmail.com:587`, Username/From/To เป็นบัญชี Gmail, Password เป็น App Password จาก `myaccount.google.com/apppasswords`) ช่อง SMTP Server ใส่แค่ `smtp.gmail.com` และ Port `587` แยกกัน App Password ไม่มีช่องว่าง (รหัสผ่าน Gmail ปกติได้ `534-5.7.9 Application-specific password required`) เปิด action Database Backup และ Dokploy Restart ได้อีเมล "Database backup for dokploy" ทั้งสำเร็จและล้ม ตั้ง Gmail filter Subject `Database backup` ติด label วันไหนไม่มีอีเมลแปลว่ามีปัญหา
+
+### บน VPS
+
+script อยู่ที่ `deploy/backup/spk-r5-local-backup.sh` รัน `pg_dump -Fc` ใน container ของฐานข้อมูล (ใช้ `POSTGRES_USER`/`POSTGRES_DB` ที่ Dokploy ตั้งไว้) ลง `/var/backups/spk-r5/` สิทธิ์ `600` และลบไฟล์อายุ 7 วันขึ้นไป จากเครื่องที่มี repo:
+
+```bash
+ssh root@<ip> 'cat > /usr/local/sbin/spk-r5-local-backup && chmod 700 /usr/local/sbin/spk-r5-local-backup' < deploy/backup/spk-r5-local-backup.sh
+ssh root@<ip> /usr/local/sbin/spk-r5-local-backup     # ต้องได้ "wrote ... bytes"
+```
+
+แล้วเพิ่มใน `crontab -e` ของ root (เครื่องตั้ง timezone เป็น `Asia/Bangkok` ดู `docs/deploy/vps-setup.md` ข้อ 7):
+
+```cron
+30 2 * * * /usr/local/sbin/spk-r5-local-backup >> /var/log/spk-r5-local-backup.log 2>&1
+```
+
 ## Deploy เวอร์ชันใหม่
 
 1. Merge เข้า `main` แล้ว push
@@ -146,11 +189,7 @@ script ไม่พิมพ์อะไรเมื่อสำเร็จ `ec
 
 Migration ใหม่ถูก apply เองตอน backend start ถ้าจะย้อนเวอร์ชัน ให้เปลี่ยน image tag จาก `latest` เป็น `sha-<commit>` ของเวอร์ชันก่อนแล้ว Deploy (migration ที่ apply ไปแล้วจะไม่ถูกย้อน ต้องดูว่าเวอร์ชันเก่ายังใช้ schema ใหม่ได้)
 
-Image ของ backend ใหญ่ราว 600 MB และ disk ของ VPS มีจำกัด ให้ลบ image เก่าเป็นระยะ:
-
-```bash
-docker image prune -a --filter "until=168h"
-```
+Image ของ backend ใหญ่ราว 600 MB และ disk ของ VPS มีจำกัด เปิด Settings > Web Server > Daily Docker Cleanup ไว้ Dokploy จะรัน `docker container prune`, `docker image prune --all` และ `docker system prune --all` ทุกวัน 23:50 UTC (06:50 เวลาไทย) container ที่หยุดอยู่และ image ที่ไม่มี container ใช้จะถูกลบ
 
 ## ปลดล็อกบัญชีฉุกเฉิน
 
@@ -159,3 +198,67 @@ docker image prune -a --filter "until=168h"
 ```bash
 docker exec $(docker ps -q -f name=spkr5parkinglog-spkr5backend | head -1) node dist/scripts/unlock-user.js <username>
 ```
+
+## Restore
+
+ทั้งสองแบบใช้ `pg_restore` ไฟล์จาก B2 ต้อง `gunzip -c` ก่อน ไฟล์บน VPS ไม่ต้อง
+
+### ซ้อม restore (ทุก 3 เดือน ไม่แตะ prod)
+
+ไฟล์บน VPS:
+
+```bash
+F=$(ls -t /var/backups/spk-r5/*.dump | head -1)
+docker run -d --rm --name restore-test -m 256m -e POSTGRES_PASSWORD=drill postgres:18.4-alpine3.23
+until docker exec restore-test pg_isready -U postgres; do sleep 1; done; sleep 3
+docker exec -i restore-test pg_restore -U postgres -d postgres --no-owner --no-acl < "$F" && echo restore-ok
+docker exec restore-test psql -U postgres -Atc "SELECT count(*) FROM houses"   # เทียบกับ prod
+docker stop restore-test
+```
+
+ไฟล์จาก B2: ดาวน์โหลดจาก Browse Files มาที่เครื่องที่มี Docker แล้วใช้คำสั่งเดียวกันแต่เปลี่ยนบรรทัด restore เป็น `gunzip -c <ไฟล์>.sql.gz | docker exec -i restore-test pg_restore ...` ลบไฟล์ที่ดาวน์โหลดทิ้งหลังซ้อม (มี hash รหัสผ่าน)
+
+นับแถวของ `houses`, `violation_categories`, `parking_violations`, `fines`, `users`, `audit_logs`, `_prisma_migrations` เทียบกับ prod ถ้าตรงกันแปลว่าไฟล์ใช้ได้ (`audit_logs` ของ prod อาจมากกว่าถ้ามีคน login หลังเวลาของไฟล์)
+
+### กู้ข้อมูล prod
+
+**ข้อมูลใน prod หลังเวลาของไฟล์ backup จะหายทั้งหมด** ทำเมื่อข้อมูลเสียหายจริงเท่านั้น
+
+1. หยุดการเขียน: `spk-r5-backend` > Stop
+2. backup สภาพปัจจุบันไว้ก่อน: `/usr/local/sbin/spk-r5-local-backup`
+3. restore ทับ (ไฟล์บน VPS):
+
+   ```bash
+   DB=$(docker ps -q -f name=spkr5parkinglog-spkr5db | head -1)
+   docker exec -i "$DB" sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-acl' < /var/backups/spk-r5/<ไฟล์>.dump
+   ```
+
+   ไฟล์จาก B2: ใช้ `spk-r5-db` > Backups > Restore Backup ของ Dokploy หรือ copy ไฟล์ขึ้น VPS แล้ว `gunzip -c <ไฟล์> | docker exec -i "$DB" sh -c '...'` แบบเดียวกัน
+4. `spk-r5-backend` > Deploy (migrate deploy รันเองถ้า schema ในไฟล์เก่ากว่า) แล้วเช็ก `/api/health` และ login
+
+## กู้ระบบเมื่อ VPS หายทั้งเครื่อง
+
+1. VPS ใหม่: ทำ `docs/deploy/vps-setup.md` ทั้งหมดและติดตั้ง Dokploy
+2. Cloudflare: เปลี่ยน A record `parking` และ `panel` เป็น IP ใหม่ (DNS only)
+3. ทำข้อ 1–3 ของคู่มือนี้ (Database, Backend, Frontend) ใช้ secret ชุดใหม่ได้ ผู้ใช้ทุกคนต้อง login ใหม่ **ข้ามข้อ 4 Seed**
+4. ดาวน์โหลดไฟล์ล่าสุดจาก B2 แล้ว restore ตาม "กู้ข้อมูล prod" ข้อ 1, 3, 4
+5. ตั้ง backup ข้อ 6 ใหม่ (destination ใช้ key `-nodelete` เดิมได้) และ cleanup schedule ข้อ 5
+
+## ดูฐานข้อมูลจากเครื่องตัวเอง (DBeaver)
+
+ฐานข้อมูลไม่เปิด port ออก internet ใช้ container `db-tunnel` บน VPS ที่เปิด `127.0.0.1:15432` ส่งต่อไปยังฐานข้อมูล แล้วให้ DBeaver ต่อผ่าน SSH
+
+cron ของ root สร้าง tunnel 07:00 และลบ 00:00 (เวลาไทย) ใช้สร้าง/ลบแทน start/stop เพราะ Daily Docker Cleanup ลบ container ที่หยุดอยู่ตอน 06:50:
+
+```cron
+0 7 * * * /usr/bin/docker rm -f db-tunnel >/dev/null 2>&1; /usr/bin/docker run -d --name db-tunnel --restart unless-stopped --network dokploy-network -p 127.0.0.1:15432:5432 alpine/socat tcp-listen:5432,fork,reuseaddr tcp-connect:spkr5parkinglog-spkr5db-cclaxl:5432 >/dev/null 2>&1
+0 0 * * * /usr/bin/docker rm -f db-tunnel >/dev/null 2>&1
+```
+
+**ห้ามลบ `127.0.0.1:` ออกจาก `-p`** ไม่งั้นฐานข้อมูลเปิดออก internet (`ufw` กัน port ที่ Docker publish ไม่ได้) ตรวจ: `ss -ltn | grep 15432` ต้องเป็น `127.0.0.1:15432` ถ้าชื่อ service ฐานข้อมูลเปลี่ยน ดู Internal Host ใน `spk-r5-db` > General
+
+DBeaver:
+
+- Main: Host `127.0.0.1` (ไม่ใช้ `localhost` อาจแปลงเป็น IPv6), Port `15432`, Database/Username/Password ของ `spk-r5-db`
+- SSH: Host IP ของ VPS, Port `22`, User `root`, Public Key ใส่ path เต็มของ private key (DBeaver ไม่แปลง `~`), Advanced settings > Implementation `SSHJ`, **ไม่ติ๊ก** Share this tunnel with other connections (tunnel ที่ค้างจากการตั้งค่าผิดจะถูกใช้ซ้ำแล้วได้ `Connection reset`)
+- General: Connection type `Production`, ติ๊ก Read-only connection
