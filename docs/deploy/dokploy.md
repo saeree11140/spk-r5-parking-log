@@ -183,11 +183,25 @@ ssh root@<ip> /usr/local/sbin/spk-r5-local-backup     # ต้องได้ "w
 
 ## Deploy เวอร์ชันใหม่
 
-1. Merge เข้า `main` แล้ว push
-2. รอ GitHub Actions ผ่านทั้ง job `check` และ `images`
-3. Dokploy > `spk-r5-backend` > Deploy แล้ว `spk-r5-frontend` > Deploy
+push เข้า `main` แล้ว GitHub Actions deploy ให้เอง: job `check` และ `images` ผ่านแล้ว job `deploy` จะ
 
-Migration ใหม่ถูก apply เองตอน backend start ถ้าจะย้อนเวอร์ชัน ให้เปลี่ยน image tag จาก `latest` เป็น `sha-<commit>` ของเวอร์ชันก่อนแล้ว Deploy (migration ที่ apply ไปแล้วจะไม่ถูกย้อน ต้องดูว่าเวอร์ชันเก่ายังใช้ schema ใหม่ได้)
+1. อ่าน commit ที่ prod รันอยู่จาก `/api/health` (`"version"`) และ `/version.txt` (CI ใส่ commit SHA ลง image เป็น build arg `APP_VERSION`)
+2. `git diff` จาก commit นั้นถึง commit ปัจจุบัน deploy เฉพาะ service ที่ไฟล์ของมันเปลี่ยน (`apps/<service>`, `packages/shared-types`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.dockerignore`) อ่าน version ไม่ได้ให้ deploy ไว้ก่อน แก้แค่ `docs/` จึงไม่ deploy
+3. ยิง webhook ของ backend รอจน `/api/health` ตอบ version ใหม่ (นานสุด 5 นาที) แล้วจึงทำแบบเดียวกันกับ frontend ไม่ตรงหรือ webhook ไม่ได้ 200 job เป็นสีแดง GitHub ส่งอีเมล ดูสาเหตุที่ Deployments ของ service ใน Dokploy
+
+ตั้งค่าครั้งเดียว:
+
+1. Dokploy > `spk-r5-backend` และ `spk-r5-frontend` > General: เปิด **Autodeploy** (ปิดอยู่ webhook ได้ 400)
+2. แต่ละ service > แท็บ Deployments: คัดลอก **Webhook URL** (`https://panel.<domain>/api/deploy/<token>` ใครได้ URL ก็สั่ง deploy ได้ เก็บเป็นความลับ)
+3. GitHub > repo > Settings > Environments > New environment `production` (ไม่ต้องตั้ง reviewer) > Add environment secret:
+   - `DOKPLOY_BACKEND_WEBHOOK`: Webhook URL ของ backend
+   - `DOKPLOY_FRONTEND_WEBHOOK`: Webhook URL ของ frontend
+
+ถ้า URL หลุด กด Refresh token ในแท็บ Deployments แล้วอัปเดต secret
+
+deploy เองด้วยมือยังทำได้: `spk-r5-backend` > Deploy แล้ว `spk-r5-frontend` > Deploy (backend ก่อนเสมอ)
+
+ย้อนเวอร์ชัน: เปลี่ยน Docker Image ของ service จาก `:latest` เป็น `:sha-<commit>` ของเวอร์ชันก่อน (ดูได้ที่ GitHub > Packages) แล้ว Deploy เช็กด้วย `/api/health` ว่า `version` เป็น commit นั้น migration ที่ apply ไปแล้วจะไม่ถูกย้อน ต้องดูว่าเวอร์ชันเก่ายังใช้ schema ใหม่ได้ ไม่ได้ให้ restore ตามหัวข้อ "กู้ข้อมูล prod" ระหว่างที่ตั้งเป็น `:sha-...` job `deploy` ของ push ถัดไปจะล้มเพราะ version ไม่ตรง แก้เสร็จให้เปลี่ยนกลับเป็น `:latest` ก่อน merge
 
 Image ของ backend ใหญ่ราว 600 MB และ disk ของ VPS มีจำกัด เปิด Settings > Web Server > Daily Docker Cleanup ไว้ Dokploy จะรัน `docker container prune`, `docker image prune --all` และ `docker system prune --all` ทุกวัน 23:50 UTC (06:50 เวลาไทย) container ที่หยุดอยู่และ image ที่ไม่มี container ใช้จะถูกลบ
 

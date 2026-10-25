@@ -135,6 +135,7 @@ export interface HouseDetail {
 export interface HealthCheckResponse {
   status: "ok";
   service: string;
+  version: string;
 }
 
 export interface CreateViolationInput {

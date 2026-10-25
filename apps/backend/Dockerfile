@@ -39,6 +39,11 @@ COPY --from=build /repo/apps/backend/dist ./dist
 USER node
 EXPOSE 3001
 
+# Commit SHA from CI, reported by /api/health. Declared last so a new SHA
+# does not invalidate the cached layers above.
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD ["node", "-e", "fetch(`http://127.0.0.1:${process.env.BACKEND_PORT || 3001}/api/health`).then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
 

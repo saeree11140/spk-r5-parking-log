@@ -15,6 +15,11 @@ COPY apps/frontend apps/frontend
 RUN pnpm --filter @spk-r5-parking-log/shared-types build \
     && pnpm --filter frontend build
 
+# Commit SHA from CI, served as /version.txt for the deploy job. Written
+# after the build so a new SHA does not invalidate the cached build layers.
+ARG APP_VERSION=dev
+RUN printf '%s\n' "$APP_VERSION" > apps/frontend/dist/version.txt
+
 FROM nginxinc/nginx-unprivileged:1.28-alpine
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /repo/apps/frontend/dist /usr/share/nginx/html
