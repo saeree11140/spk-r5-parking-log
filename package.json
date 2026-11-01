@@ -19,6 +19,6 @@
     "format": "pnpm --recursive format"
   },
   "devDependencies": {
-    "prettier": "latest"
+    "prettier": "^3.9.10"
   }
 }

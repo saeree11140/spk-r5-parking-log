@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       prettier:
-        specifier: latest
+        specifier: ^3.9.10
         version: 3.9.10
 
   apps/backend:
