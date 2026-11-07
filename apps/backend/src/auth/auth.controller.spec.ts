@@ -59,7 +59,7 @@ describe('AuthController', () => {
       ip: '127.0.0.1',
       headers: { 'user-agent': 'test-agent' },
       get: jest.fn().mockReturnValue('test-agent'),
-    } as Request;
+    } as unknown as Request;
     const response = {} as Response;
 
     const result = await controller.login(
