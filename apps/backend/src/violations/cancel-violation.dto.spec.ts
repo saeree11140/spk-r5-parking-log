@@ -13,7 +13,7 @@ describe('CancelViolationDto', () => {
     expect(dto.reason).toBe('wrong house');
   });
 
-  it.each(['1234', 'x'.repeat(501)])(
+  it.each(['1234', 'x'.repeat(501), '\u2764\uFE0F'.repeat(251)])(
     'rejects reason length',
     async (reason) => {
       const dto = plainToInstance(CancelViolationDto, { reason });

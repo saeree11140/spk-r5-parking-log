@@ -4,11 +4,12 @@ import {
   IsOptional,
   IsString,
   Matches,
-  MaxLength,
   Validate,
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
+
+import { MaxCodePoints } from '../common/max-code-points';
 
 @ValidatorConstraint({ name: 'isPastDateTime', async: false })
 class IsPastDateTimeConstraint implements ValidatorConstraintInterface {
@@ -37,6 +38,6 @@ export class UpdateViolationDto {
     return trimmed === '' ? null : trimmed;
   })
   @IsString()
-  @MaxLength(1000)
+  @MaxCodePoints(1000)
   note?: string | null;
 }
