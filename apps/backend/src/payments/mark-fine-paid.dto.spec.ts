@@ -27,4 +27,12 @@ describe('MarkFinePaidDto', () => {
     });
     expect(await validate(dto)).not.toHaveLength(0);
   });
+
+  it('counts variation selectors toward the reference column', async () => {
+    const dto = plainToInstance(MarkFinePaidDto, {
+      paidAt: '2026-07-19T10:00:00Z',
+      reference: '\u2764\uFE0F'.repeat(65),
+    });
+    expect(await validate(dto)).not.toHaveLength(0);
+  });
 });

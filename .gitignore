@@ -19,7 +19,13 @@ dist
 
 # misc
 .DS_Store
+
+# secrets and database dumps
 *.pem
+*.key
+*.p12
+credentials*.json
+*.dump
 
 # debug
 npm-debug.log*
@@ -28,8 +34,9 @@ yarn-error.log*
 pnpm-debug.log*
 
 # local env files
-.env*.local
 .env
+.env.*
+!.env.example
 
 # vercel
 .vercel

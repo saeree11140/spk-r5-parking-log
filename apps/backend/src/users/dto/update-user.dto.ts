@@ -5,9 +5,10 @@ import {
   IsIn,
   IsOptional,
   IsString,
-  MaxLength,
   MinLength,
 } from 'class-validator';
+
+import { MaxCodePoints } from '../../common/max-code-points';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -16,7 +17,7 @@ export class UpdateUserDto {
   )
   @IsString()
   @MinLength(1)
-  @MaxLength(255)
+  @MaxCodePoints(255)
   displayName?: string;
 
   @IsOptional()

@@ -8,6 +8,7 @@ const environment: AuthEnvironment = {
   tokenPepper: 'p'.repeat(32),
   frontendUrl: 'http://localhost:3000',
   cookieSecure: false,
+  trustProxyHops: 0,
 };
 
 const user = {

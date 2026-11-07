@@ -24,6 +24,18 @@ describe('CreateViolationDto', () => {
     expect(await validate(dto)).not.toHaveLength(0);
   });
 
+  it('counts variation selectors toward the note limit', async () => {
+    const dto = plainToInstance(CreateViolationDto, {
+      categoryId: '5c0f3d0e-7b1a-4c55-9a51-2f3c1f0a0001',
+      occurredAt: '2026-07-19T10:00:00+07:00',
+      note: '\u2764\uFE0F'.repeat(501),
+    });
+
+    expect((await validate(dto)).map(({ property }) => property)).toEqual([
+      'note',
+    ]);
+  });
+
   it('requires a category id', async () => {
     const dto = plainToInstance(CreateViolationDto, {
       occurredAt: '2026-07-19T10:00:00+07:00',

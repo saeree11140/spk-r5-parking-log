@@ -1,5 +1,7 @@
 import { Transform } from 'class-transformer';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
+
+import { MaxCodePoints } from '../common/max-code-points';
 
 export class CancelViolationDto {
   @Transform(({ value }) =>
@@ -7,6 +9,6 @@ export class CancelViolationDto {
   )
   @IsString()
   @MinLength(5)
-  @MaxLength(500)
+  @MaxCodePoints(500)
   reason!: string;
 }

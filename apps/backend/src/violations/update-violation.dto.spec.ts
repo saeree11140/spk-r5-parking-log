@@ -52,4 +52,15 @@ describe('UpdateViolationDto', () => {
 
     expect(await validate(dto)).not.toHaveLength(0);
   });
+
+  it('counts variation selectors toward the note limit', async () => {
+    const dto = plainToInstance(UpdateViolationDto, {
+      occurredAt: '2026-08-14T10:00:00+07:00',
+      note: '\u2764\uFE0F'.repeat(501),
+    });
+
+    expect((await validate(dto)).map(({ property }) => property)).toEqual([
+      'note',
+    ]);
+  });
 });

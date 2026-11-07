@@ -9,9 +9,15 @@ describe('seedAdmin', () => {
   };
 
   function createPrismaMock() {
-    const findUnique = jest.fn<AdminSeedPrisma['user']['findUnique']>();
+    const findUnique = jest.fn<
+      ReturnType<AdminSeedPrisma['user']['findUnique']>,
+      Parameters<AdminSeedPrisma['user']['findUnique']>
+    >();
     const create = jest
-      .fn<AdminSeedPrisma['user']['create']>()
+      .fn<
+        ReturnType<AdminSeedPrisma['user']['create']>,
+        Parameters<AdminSeedPrisma['user']['create']>
+      >()
       .mockResolvedValue({ id: 'created' });
 
     return {
@@ -25,7 +31,10 @@ describe('seedAdmin', () => {
 
   function createPasswordServiceMock() {
     const hash = jest
-      .fn<PasswordService['hash']>()
+      .fn<
+        ReturnType<PasswordService['hash']>,
+        Parameters<PasswordService['hash']>
+      >()
       .mockResolvedValue('argon2id-hash');
     const service = {
       validate: jest.fn().mockReturnValue({ valid: true }),

@@ -17,9 +17,9 @@ function houseRecord() {
         cycleNumber: 1,
         fineRuleVersion: 'V1' as const,
         category: { id: 'category-1', name: 'จอดรถผิดระเบียบ', isActive: true },
-        status: 'OPEN' as const,
+        status: 'OPEN' as 'OPEN' | 'CLOSED',
         openedAt: date,
-        closedAt: null,
+        closedAt: null as Date | null,
         violations: [
           {
             id: 'violation-cancelled',

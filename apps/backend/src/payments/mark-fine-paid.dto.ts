@@ -1,11 +1,7 @@
 import { Transform } from 'class-transformer';
-import {
-  IsISO8601,
-  IsOptional,
-  IsString,
-  Matches,
-  MaxLength,
-} from 'class-validator';
+import { IsISO8601, IsOptional, IsString, Matches } from 'class-validator';
+
+import { MaxCodePoints } from '../common/max-code-points';
 
 export class MarkFinePaidDto {
   @IsString()
@@ -18,6 +14,6 @@ export class MarkFinePaidDto {
     typeof value === 'string' ? value.trim() : (value as unknown),
   )
   @IsString()
-  @MaxLength(128)
+  @MaxCodePoints(128)
   reference?: string;
 }

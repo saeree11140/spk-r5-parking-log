@@ -48,37 +48,40 @@ interface UpsertArgs {
   update: Record<string, unknown>;
 }
 
+type MockFn<T extends (...args: never[]) => unknown> = jest.Mock<
+  ReturnType<T>,
+  Parameters<T>
+>;
+
 type PrismaMock = {
   user: {
-    findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
-    update: jest.Mock<(args: MutationArgs) => Promise<unknown>>;
-    updateMany: jest.Mock<(args: MutationArgs) => Promise<{ count: number }>>;
+    findUnique: MockFn<(args: unknown) => Promise<unknown>>;
+    update: MockFn<(args: MutationArgs) => Promise<unknown>>;
+    updateMany: MockFn<(args: MutationArgs) => Promise<{ count: number }>>;
   };
   authSession: {
-    findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
-    create: jest.Mock<(args: unknown) => Promise<unknown>>;
-    update: jest.Mock<(args: unknown) => Promise<unknown>>;
-    updateMany: jest.Mock<(args: MutationArgs) => Promise<{ count: number }>>;
+    findUnique: MockFn<(args: unknown) => Promise<unknown>>;
+    create: MockFn<(args: unknown) => Promise<unknown>>;
+    update: MockFn<(args: unknown) => Promise<unknown>>;
+    updateMany: MockFn<(args: MutationArgs) => Promise<{ count: number }>>;
   };
   auditLog: {
-    create: jest.Mock<(args: AuditCreateArgs) => Promise<unknown>>;
+    create: MockFn<(args: AuditCreateArgs) => Promise<unknown>>;
   };
   loginFailure: {
-    findUnique: jest.Mock<(args: unknown) => Promise<unknown>>;
-    upsert: jest.Mock<(args: UpsertArgs) => Promise<unknown>>;
-    deleteMany: jest.Mock<(args: unknown) => Promise<{ count: number }>>;
+    findUnique: MockFn<(args: unknown) => Promise<unknown>>;
+    upsert: MockFn<(args: UpsertArgs) => Promise<unknown>>;
+    deleteMany: MockFn<(args: unknown) => Promise<{ count: number }>>;
   };
-  $transaction: jest.Mock<
+  $transaction: MockFn<
     (
       operation: (transaction: PrismaMock) => Promise<unknown>,
     ) => Promise<unknown>
   >;
 };
 
-function mockFunction<
-  T extends (...args: never[]) => unknown,
->(): jest.MockedFunction<T> {
-  return jest.fn() as unknown as jest.MockedFunction<T>;
+function mockFunction<T extends (...args: never[]) => unknown>(): MockFn<T> {
+  return jest.fn<ReturnType<T>, Parameters<T>>();
 }
 
 describe('AuthService', () => {
@@ -162,13 +165,13 @@ describe('AuthService', () => {
     transaction.mockImplementation((operation) => operation(prisma));
 
     const passwordService = {
-      validate: jest
-        .fn<PasswordService['validate']>()
-        .mockReturnValue({ valid: true }),
-      hash: jest
-        .fn<PasswordService['hash']>()
-        .mockResolvedValue('new-password-hash'),
-      verify: jest.fn<PasswordService['verify']>(),
+      validate: mockFunction<PasswordService['validate']>().mockReturnValue({
+        valid: true,
+      }),
+      hash: mockFunction<PasswordService['hash']>().mockResolvedValue(
+        'new-password-hash',
+      ),
+      verify: mockFunction<PasswordService['verify']>(),
     };
     const tokenService = {
       createRefreshToken: jest.fn().mockReturnValue({

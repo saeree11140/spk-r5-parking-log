@@ -9,6 +9,7 @@ const environment: AuthEnvironment = {
   tokenPepper: 'p'.repeat(32),
   frontendUrl: 'https://admin.example.com',
   cookieSecure: true,
+  trustProxyHops: 0,
 };
 
 describe('CsrfGuard', () => {

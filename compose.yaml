@@ -8,7 +8,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-spk_r5}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spk_r5_local}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Loopback only: the dev database is not for the LAN.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:

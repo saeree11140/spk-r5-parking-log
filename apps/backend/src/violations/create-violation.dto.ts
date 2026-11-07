@@ -5,8 +5,9 @@ import {
   IsString,
   IsUUID,
   Matches,
-  MaxLength,
 } from 'class-validator';
+
+import { MaxCodePoints } from '../common/max-code-points';
 
 export class CreateViolationDto {
   @IsUUID()
@@ -22,6 +23,6 @@ export class CreateViolationDto {
     typeof value === 'string' ? value.trim() : (value as unknown),
   )
   @IsString()
-  @MaxLength(1000)
+  @MaxCodePoints(1000)
   note?: string;
 }

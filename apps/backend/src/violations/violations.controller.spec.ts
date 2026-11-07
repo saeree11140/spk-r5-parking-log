@@ -12,7 +12,10 @@ describe('ViolationsController', () => {
     const create = jest.fn().mockResolvedValue({ violation: { id: 'v-1' } });
     const service = { create } as unknown as ViolationsService;
     const controller = new ViolationsController(service);
-    const dto = { occurredAt: '2026-07-18T10:00:00+07:00' };
+    const dto = {
+      categoryId: '5c0f3d0e-7b1a-4c55-9a51-2f3c1f0a0001',
+      occurredAt: '2026-07-18T10:00:00+07:00',
+    };
 
     await expect(
       controller.create({ houseCode: 'R5-001' }, dto, authenticatedUser),
